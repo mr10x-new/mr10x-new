@@ -435,7 +435,7 @@ app.post('/api/verify-email', (req, res) => {
 
                 <!-- CTA -->
                 <div style="text-align:center;margin-top:32px;">
-                  <a href="https://mr10x-otp-production.up.railway.app/index.html" style="display:inline-block;background:#f59f0b;color:#0e0e12;font-weight:800;font-size:15px;padding:14px 32px;border-radius:12px;text-decoration:none;">
+                  <a href="https://mr10x-production.up.railway.app/index.html" style="display:inline-block;background:#f59f0b;color:#0e0e12;font-weight:800;font-size:15px;padding:14px 32px;border-radius:12px;text-decoration:none;">
                     الذهاب لصفحة تسجيل الدخول
                   </a>
                 </div>
