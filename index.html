@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="FQtSYvE1JFcWkmogVCg9GcHmCFydLjkxURvKrjbjAfY" />
+<title>MR10X — لوحة التحكم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0e0e12;
+  --surface: #17171d;
+  --surface2: #1f1f28;
+  --border: rgba(255,255,255,0.07);
+  --border-hover: rgba(245,159,11,0.3);
+  --accent: #f59f0b;
+  --accent-dim: rgba(245,159,11,0.12);
+  --accent2: #fbbf24;
+  --text: #f4f3ef;
+  --muted: #8a8898;
+  --green: #22c55e;
+  --red: #ef4444;
+  --radius: 14px;
+}
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'Tajawal', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Auth Screen ── */
+#auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+#auth-screen::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(245,159,11,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(245,159,11,0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-card-top {
+  padding: 36px 36px 28px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.auth-logo {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.logo-type {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  color: var(--text);
+  line-height: 1;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.logo-type .lt-m  { font-weight: 900; font-size: 1em; color: var(--text); }
+.logo-type .lt-r  { font-weight: 300; font-size: 0.72em; color: var(--muted); }
+.logo-type .lt-10 { font-weight: 900; font-size: 1.05em; color: var(--accent); letter-spacing: -2px; }
+.logo-type .lt-x  { font-weight: 700; font-size: 0.85em; color: var(--text); }
+
+.auth-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.auth-sub {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.auth-card-body { padding: 28px 36px 36px; }
+
+/* Plan Selector */
+.plan-selector { margin-bottom: 20px; }
+
+.plan-label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: block;
+}
+
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.plan-opt {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  text-align: center;
+  position: relative;
+}
+
+.plan-opt:hover { border-color: var(--border-hover); }
+
+.plan-opt.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.plan-opt input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.plan-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.plan-opt.selected .plan-name { color: var(--accent2); }
+
+.plan-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.plan-dur {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-top: 2px;
+}
+
+/* Form */
+.field { margin-bottom: 16px; }
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+
+.field input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s;
+  -webkit-appearance: none;
+}
+
+.field input:focus { border-color: var(--border-hover); }
+.field input::placeholder { color: var(--muted); opacity: .6; }
+
+.field input[dir="ltr"] { direction: ltr; text-align: left; }
+
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: #0e0e12;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .2s, transform .15s;
+  margin-top: 4px;
+}
+
+.btn-primary:hover { opacity: .92; }
+.btn-primary:active { transform: scale(.98); }
+
+.auth-toggle {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.auth-toggle a {
+  color: var(--accent2);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-toggle a:hover { text-decoration: underline; }
+
+.error-msg {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--red);
+  margin-bottom: 14px;
+  display: none;
+}
+
+/* Verify Box */
+#verify-box {
+  display: none;
+  padding: 36px;
+}
+
+.verify-icon {
+  width: 56px;
+  height: 56px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(245,159,11,0.3);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin: 0 auto 16px;
+}
+
+.verify-title {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.verify-sub {
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.verify-sub span {
+  color: var(--accent2);
+  font-weight: 600;
+}
+
+.code-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.code-row input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+  text-align: center;
+  letter-spacing: 4px;
+  direction: ltr;
+  transition: border-color .2s;
+}
+
+.code-row input:focus { border-color: var(--border-hover); }
+
+.verify-actions { display: flex; flex-direction: column; gap: 10px; }
+
+.btn-outline {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+
+.btn-outline:hover { border-color: var(--border-hover); color: var(--text); }
+
+/* ── Dashboard ── */
+#dashboard-screen { display: none; }
+
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 62px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.topbar-logo .logo-type {
+  font-size: 20px;
+  letter-spacing: -1px;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px 6px 6px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(245,159,11,0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent2);
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+
+.btn-logout:hover { border-color: rgba(239,68,68,0.4); color: var(--red); }
+
+/* Subscription Banner */
+#sub-banner {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sub-info { display: flex; align-items: center; gap: 10px; }
+
+.sub-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+  box-shadow: 0 0 8px var(--green);
+}
+
+.sub-dot.warning { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.sub-dot.expired { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+.sub-text { font-size: 14px; color: var(--text); }
+
+.sub-text span {
+  font-weight: 700;
+  color: var(--green);
+}
+
+.sub-text span.warning { color: var(--accent); }
+.sub-text span.expired { color: var(--red); }
+
+.sub-plan {
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--accent-dim);
+  border: 1px solid rgba(245,159,11,0.2);
+  border-radius: 20px;
+  padding: 3px 10px;
+  color: var(--accent2);
+}
+
+.btn-renew {
+  background: transparent;
+  border: 1px solid rgba(245,159,11,0.3);
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .2s;
+  white-space: nowrap;
+}
+
+.btn-renew:hover { background: var(--accent-dim); }
+
+/* Dashboard Content */
+.dash-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 5px;
+  margin-bottom: 24px;
+  width: fit-content;
+}
+
+.tab {
+  padding: 9px 20px;
+  border-radius: 9px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  transition: background .2s, color .2s;
+}
+
+.tab.active {
+  background: var(--accent);
+  color: #0e0e12;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Section Header */
+.section-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.section-count {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.btn-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent);
+  color: #0e0e12;
+  border: none;
+  border-radius: 9px;
+  padding: 9px 16px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+
+.btn-add:hover { opacity: .9; }
+
+/* Cards */
+.card-list { display: flex; flex-direction: column; gap: 10px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  transition: border-color .2s;
+}
+
+.card:hover { border-color: rgba(255,255,255,0.12); }
+
+.card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.card-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(245,159,11,0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.card-info { min-width: 0; }
+
+.card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+  direction: ltr;
+  text-align: right;
+}
+
+.card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+/* Webhook */
+.webhook-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.webhook-url {
+  flex: 1;
+  font-size: 12px;
+  color: var(--muted);
+  direction: ltr;
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: monospace;
+}
+
+/* Action Buttons */
+.btn-sm {
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  transition: border-color .2s, color .2s, background .2s;
+  white-space: nowrap;
+}
+
+.btn-sm:hover { border-color: rgba(255,255,255,0.15); color: var(--text); }
+
+.btn-sm.danger:hover { border-color: rgba(239,68,68,0.4); color: var(--red); background: rgba(239,68,68,0.06); }
+
+.btn-sm.accent {
+  border-color: rgba(245,159,11,0.3);
+  color: var(--accent);
+}
+
+.btn-sm.accent:hover { background: var(--accent-dim); border-color: rgba(245,159,11,0.5); }
+
+.badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.badge-green {
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.2);
+  color: var(--green);
+}
+
+.badge-red {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: var(--red);
+}
+
+.badge-muted {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 56px 24px;
+  color: var(--muted);
+}
+
+.empty-icon {
+  font-size: 36px;
+  margin-bottom: 14px;
+  opacity: .5;
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.empty-sub { font-size: 14px; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+
+.modal-overlay.open {
+  display: flex;
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+  transform: translateY(10px) scale(.98);
+  transition: transform .2s;
+}
+
+.modal-overlay.open .modal { transform: none; }
+
+.modal-header {
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title { font-size: 17px; font-weight: 700; }
+
+.modal-close {
+  width: 30px;
+  height: 30px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--muted);
+  transition: color .2s;
+}
+
+.modal-close:hover { color: var(--text); }
+
+.modal-body { padding: 22px 24px 24px; }
+
+.modal-field { margin-bottom: 16px; }
+
+.modal-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+
+.modal-field input,
+.modal-field select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s;
+  -webkit-appearance: none;
+}
+
+.modal-field input:focus,
+.modal-field select:focus { border-color: var(--border-hover); }
+
+.modal-field select { cursor: pointer; }
+
+.modal-field input[dir="ltr"] { direction: ltr; text-align: left; }
+
+.modal-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(245,159,11,0.15);
+  border-radius: 8px;
+  line-height: 1.6;
+}
+
+.modal-err {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--red);
+  margin-bottom: 14px;
+  display: none;
+}
+
+.modal-ok {
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--green);
+  margin-bottom: 14px;
+  display: none;
+}
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--surface2);
+  border: 1px solid rgba(245,159,11,0.25);
+  border-radius: 10px;
+  padding: 12px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s, transform .25s;
+  z-index: 9999;
+  white-space: nowrap;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* WA link */
+.wa-link-row {
+  margin-top: 10px;
+}
+
+.wa-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.wa-link:hover { text-decoration: underline; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .auth-card-top { padding: 28px 24px 20px; }
+  .auth-card-body { padding: 20px 24px 28px; }
+
+  .topbar { padding: 0 16px; }
+  .topbar-brand { display: none; }
+
+  .dash-content { padding: 20px 16px 60px; }
+
+  .plan-grid { grid-template-columns: repeat(3, 1fr); }
+
+  .card-actions { width: 100%; justify-content: flex-end; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ AUTH SCREEN ═══════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+
+    <!-- Top -->
+    <div class="auth-card-top">
+      <div class="auth-logo">
+        <div class="logo-type"><span class="lt-m">M</span><span class="lt-r">r</span><span class="lt-10">10</span><span class="lt-x">x</span></div>
+      </div>
+      <div id="auth-form-content">
+        <div class="auth-title" id="auth-title">تسجيل الدخول</div>
+        <div class="auth-sub" id="auth-sub">مرحباً بك مجدداً — أدخل بياناتك للمتابعة</div>
+      </div>
+    </div>
+
+    <!-- Verify Box -->
+    <div id="verify-box">
+      <div class="verify-icon">📧</div>
+      <div class="verify-title">تحقق من بريدك</div>
+      <div class="verify-sub">أرسلنا رمز التحقق إلى<br><span id="verify-email-label"></span></div>
+      <div id="verify-err" class="error-msg"></div>
+      <div class="code-row">
+        <input type="text" id="verify-code" inputmode="numeric" maxlength="6" placeholder="000000"
+          onkeyup="if(event.key==='Enter')confirmVerify()">
+      </div>
+      <div class="verify-actions">
+        <button class="btn-primary" onclick="confirmVerify()">تأكيد الحساب</button>
+        <button class="btn-outline" id="resend-btn" onclick="resendCode()">إعادة إرسال الرمز</button>
+        <button class="btn-outline" onclick="backToRegister()">العودة للتسجيل</button>
+      </div>
+      <div class="wa-link-row" id="wa-link-container" style="text-align:center;margin-top:16px;"></div>
+    </div>
+
+    <!-- Auth Body -->
+    <div class="auth-card-body" id="auth-body">
+
+      <!-- Plan selector (register only) -->
+      <div class="plan-selector" id="plan-selector" style="display:none;">
+        <span class="plan-label">اختر الباقة</span>
+        <div class="plan-grid">
+          <label class="plan-opt selected" onclick="selectPlan('plan1')">
+            <input type="radio" name="plan" value="plan1" checked>
+            <span class="plan-name">أساسية</span>
+            <div class="plan-price">30</div>
+            <span class="plan-dur">ريال / شهر</span>
+          </label>
+          <label class="plan-opt" onclick="selectPlan('plan2')">
+            <input type="radio" name="plan" value="plan2">
+            <span class="plan-name">احترافية</span>
+            <div class="plan-price">60</div>
+            <span class="plan-dur">ريال / شهر</span>
+          </label>
+          <label class="plan-opt" onclick="selectPlan('plan3')">
+            <input type="radio" name="plan" value="plan3">
+            <span class="plan-name">متقدمة</span>
+            <div class="plan-price">139</div>
+            <span class="plan-dur">ريال / شهر</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="auth-err" class="error-msg"></div>
+
+      <!-- Name (register only) -->
+      <div class="field" id="name-field" style="display:none;">
+        <label>الاسم الكامل</label>
+        <input type="text" id="name" placeholder="مثال: أحمد المحمد">
+      </div>
+
+      <!-- Email -->
+      <div class="field">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="email" placeholder="you@example.com" dir="ltr">
+      </div>
+
+      <!-- Password -->
+      <div class="field">
+        <label>كلمة المرور</label>
+        <input type="password" id="password" placeholder="••••••••" dir="ltr">
+      </div>
+
+      <!-- Confirm Password (register only) -->
+      <div class="field" id="confirm-field" style="display:none;">
+        <label>تأكيد كلمة المرور</label>
+        <input type="password" id="confirm-password" placeholder="••••••••" dir="ltr">
+      </div>
+
+      <button class="btn-primary" id="submit-btn" onclick="submitAuth()">دخول</button>
+
+      <div class="auth-toggle">
+        <span id="toggle-text">ليس لديك حساب؟</span>
+        <a onclick="toggleAuthMode()" id="toggle-link">سجّل الآن</a>
+      </div>
+
+      <div id="forgot-link-wrap" style="text-align:center; margin-top:8px;">
+        <a href="reset-password.html" style="font-size:13px; color:var(--muted); text-decoration:none;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">نسيت كلمة المرور؟</a>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════ DASHBOARD ═══════════════════ -->
+<div id="dashboard-screen">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="logo-type"><span class="lt-m">M</span><span class="lt-r">r</span><span class="lt-10">10</span><span class="lt-x">x</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar-initials">؟</div>
+        <span id="topbar-username"></span>
+      </div>
+      <button class="btn-logout" onclick="logout()">خروج</button>
+    </div>
+  </div>
+
+  <!-- Sub Banner -->
+  <div id="sub-banner">
+    <div class="sub-info">
+      <div class="sub-dot" id="sub-dot"></div>
+      <div class="sub-text">الاشتراك: <span id="days-num">...</span></div>
+      <div class="sub-plan" id="plan-badge"></div>
+    </div>
+    <a class="btn-renew" id="renew-wa-link" href="#" target="_blank">تجديد الاشتراك</a>
+  </div>
+
+  <!-- Content -->
+  <div class="dash-content">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('mailboxes', this)">📧 صناديق البريد</button>
+      <button class="tab" onclick="switchTab('slots', this)">🔗 الروابط</button>
+    </div>
+
+    <!-- Mailboxes Panel -->
+    <div class="tab-panel active" id="panel-mailboxes">
+      <div class="section-hd">
+        <div>
+          <div class="section-title">صناديق البريد</div>
+          <div class="section-count" id="mailboxes-count"></div>
+        </div>
+        <button class="btn-add" onclick="openAddMailbox()">
+          <span>+</span> إضافة صندوق
+        </button>
+      </div>
+      <div class="card-list" id="mailboxes-list">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <div class="empty-title">لا توجد صناديق بريد</div>
+          <div class="empty-sub">أضف صندوق بريد لبدء استقبال رموز OTP</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slots Panel -->
+    <div class="tab-panel" id="panel-slots">
+      <div class="section-hd">
+        <div>
+          <div class="section-title">روابط OTP</div>
+          <div class="section-count" id="slots-count"></div>
+        </div>
+        <button class="btn-add" onclick="openAddSlot()">
+          <span>+</span> إضافة رابط
+        </button>
+      </div>
+      <div class="card-list" id="slots-list">
+        <div class="empty-state">
+          <div class="empty-icon">🔗</div>
+          <div class="empty-title">لا توجد روابط</div>
+          <div class="empty-sub">أضف رابطاً لزبون لبدء إرسال الرموز</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- Add Mailbox -->
+<div class="modal-overlay" id="add-mailbox-modal" onclick="if(event.target===this)closeModal('add-mailbox-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">إضافة صندوق بريد</span>
+      <button class="modal-close" onclick="closeModal('add-mailbox-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-err" id="mb-err"></div>
+      <div class="modal-ok" id="mb-ok">✓ تمت الإضافة بنجاح</div>
+      <div class="modal-field">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="mb-email" placeholder="shop@gmail.com" dir="ltr">
+      </div>
+      <div class="modal-field">
+        <label>اسم مميز (اختياري)</label>
+        <input type="text" id="mb-label" placeholder="مثال: متجر علي">
+      </div>
+      <div class="modal-hint">
+        بعد الإضافة، اربط حسابك بـ Gmail لاستقبال رموز OTP تلقائياً.
+      </div>
+      <button class="btn-primary" style="margin-top:16px;" onclick="addMailbox()">إضافة الصندوق</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Slot -->
+<div class="modal-overlay" id="add-slot-modal" onclick="if(event.target===this)closeModal('add-slot-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">إضافة رابط OTP</span>
+      <button class="modal-close" onclick="closeModal('add-slot-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-err" id="slot-err"></div>
+      <div class="modal-field">
+        <label>اختر الصندوق</label>
+        <select id="slot-mailbox" onchange="autoFillSlotEmail()"></select>
+      </div>
+      <div class="modal-field">
+        <label>اسم الزبون</label>
+        <input type="text" id="slot-label" placeholder="مثال: متجر نون">
+      </div>
+      <div class="modal-field">
+        <label>بريد الحساب</label>
+        <input type="email" id="slot-account-email" placeholder="account@example.com" dir="ltr">
+      </div>
+      <div class="modal-field">
+        <label>كلمة مرور الحساب</label>
+        <input type="password" id="slot-account-pass" placeholder="••••••••" dir="ltr">
+      </div>
+      <div class="modal-field">
+        <label>عدد الروابط</label>
+        <input type="number" id="slot-count" value="1" min="1" max="10" dir="ltr">
+      </div>
+      <button class="btn-primary" style="margin-top:4px;" onclick="addSlot()">إنشاء الرابط</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Slot -->
+<div class="modal-overlay" id="edit-slot-modal" onclick="if(event.target===this)closeModal('edit-slot-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">تعديل بيانات الرابط</span>
+      <button class="modal-close" onclick="closeModal('edit-slot-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-slot-id">
+      <div class="modal-err" id="edit-slot-err"></div>
+      <div class="modal-field">
+        <label>بريد الحساب</label>
+        <input type="email" id="edit-account-email" placeholder="account@example.com" dir="ltr">
+      </div>
+      <div class="modal-field">
+        <label>كلمة مرور الحساب</label>
+        <input type="password" id="edit-account-pass" placeholder="••••••••" dir="ltr">
+      </div>
+      <button class="btn-primary" style="margin-top:4px;" onclick="saveSlotEdit()">حفظ التغييرات</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

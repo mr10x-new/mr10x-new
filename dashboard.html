@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mr10x — لوحة التحكم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e12;
+    --card: #17171d;
+    --card2: #1f1f28;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(245,159,11,0.3);
+    --accent: #f59f0b;
+    --accent2: #fbbf24;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #f4f3ef;
+    --muted: #8a8898;
+    --muted2: #a9a8b8;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Tajawal', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Ambient glow ── */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(245,159,11,0.07) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Navbar ── */
+  .navbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(14,14,18,0.88);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .navbar-logo {
+    display: flex; align-items: center; gap: 9px;
+    text-decoration: none;
+  }
+  .logo-type {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -1.5px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .logo-type .lt-m  { font-weight: 900; font-size: 1em; color: var(--text); }
+  .logo-type .lt-r  { font-weight: 300; font-size: 0.72em; color: var(--muted); }
+  .logo-type .lt-10 { font-weight: 900; font-size: 1.05em; color: var(--accent); letter-spacing: -2px; }
+  .logo-type .lt-x  { font-weight: 700; font-size: 0.85em; color: var(--text); }
+  .navbar-right { display: flex; align-items: center; gap: 12px; }
+  .seller-name { font-size: 13px; color: var(--muted); }
+  .btn-logout {
+    padding: 7px 16px; border-radius: 8px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-size: 13px; cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Layout ── */
+  .page { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 4px;
+    width: fit-content; margin-bottom: 32px;
+  }
+  .tab-btn {
+    padding: 9px 20px; border-radius: 9px; border: none;
+    background: transparent; color: var(--muted);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: var(--accent); color: #000; font-weight: 700;
+  }
+  .tab-btn:not(.active):hover { color: var(--text); }
+
+  /* ── Section header ── */
+  .sec-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .sec-title { font-size: 18px; font-weight: 700; }
+  .sec-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-radius: 10px;
+    background: var(--accent); color: #000; border: none;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .btn-primary:hover { background: #d97706; transform: translateY(-1px); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 9px;
+    background: var(--card2); color: var(--muted2); border: 1px solid var(--border);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 8px;
+    background: transparent; color: var(--red); border: 1px solid rgba(239,68,68,0.3);
+    font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.2s;
+  }
+  .btn-danger:hover { background: rgba(239,68,68,0.08); }
+  .btn-edit {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 7px 10px; border-radius: 8px;
+    background: transparent; color: var(--muted); border: 1px solid rgba(255,255,255,0.08);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px; margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 20px 16px;
+  }
+  .stat-label {
+    font-size: 11px; color: var(--muted); margin-bottom: 8px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .stat-value { font-size: 28px; font-weight: 800; }
+  .stat-value.amber { color: var(--accent); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align: center; padding: 60px 24px;
+    background: var(--card); border: 1px dashed var(--border);
+    border-radius: 16px;
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+  /* ── Slots grid ── */
+  .slots-grid { display: grid; gap: 12px; }
+  .slot-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+    display: flex; align-items: center; gap: 16px;
+    transition: border-color 0.2s;
+  }
+  .slot-card:hover { border-color: rgba(245,159,11,0.4); }
+  .slot-status-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .slot-status-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .slot-status-dot.exhausted { background: var(--red); }
+  .slot-info { flex: 1; min-width: 0; }
+  .slot-label { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+  .slot-meta {
+    font-size: 12px; color: var(--muted);
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .slot-meta span { display: flex; align-items: center; gap: 4px; }
+  .slot-attempts {
+    font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .slot-attempts.ok  { background: rgba(34,197,94,0.1);  color: var(--green); }
+  .slot-attempts.warn { background: rgba(245,159,11,0.12); color: var(--accent); }
+  .slot-attempts.none { background: rgba(239,68,68,0.1); color: var(--red); }
+  .slot-link-btn {
+    padding: 7px 14px; border-radius: 8px;
+    background: var(--card2); border: 1px solid var(--border);
+    color: var(--muted2); font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .slot-link-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .slot-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* ── Mailboxes ── */
+  .mailbox-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+    display: flex; align-items: center; gap: 16px;
+    transition: border-color 0.2s;
+  }
+  .mailbox-card:hover { border-color: rgba(245,159,11,0.3); }
+  .mailbox-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    background: rgba(245,159,11,0.1); border: 1px solid rgba(245,159,11,0.2);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    font-size: 20px;
+  }
+  .mailbox-info { flex: 1; }
+  .mailbox-email { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .mailbox-meta { font-size: 12px; color: var(--muted); }
+  .status-badge {
+    font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+  }
+  .status-badge.connected { background: rgba(34,197,94,0.1);  color: var(--green); }
+  .status-badge.error     { background: rgba(239,68,68,0.1);  color: var(--red); }
+  .status-badge.pending   { background: rgba(245,159,11,0.12); color: var(--accent); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px; width: 100%; max-width: 480px;
+    transform: translateY(20px); transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label {
+    font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 7px; display: block;
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .form-input {
+    width: 100%; padding: 11px 14px;
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 14px;
+    font-family: inherit; transition: border-color 0.2s; outline: none;
+  }
+  .form-input:focus { border-color: rgba(245,159,11,0.5); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .btn-cancel {
+    padding: 10px 20px; border-radius: 10px;
+    background: var(--card2); border: 1px solid var(--border);
+    color: var(--muted); font-size: 14px; cursor: pointer; font-family: inherit;
+    transition: color 0.2s;
+  }
+  .btn-cancel:hover { color: var(--text); }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 20px; font-size: 14px; font-weight: 600;
+    transition: transform 0.3s; z-index: 9999; white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  #toast.error   { border-color: var(--red);   color: var(--red); }
+
+  /* ── Loading ── */
+  .spinner {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    animation: spin 0.7s linear infinite; margin: 60px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Link copy popup ── */
+  .link-popup {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .link-popup.open { opacity: 1; pointer-events: all; }
+  .link-popup-box {
+    background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+    padding: 28px; width: 100%; max-width: 500px;
+    transform: translateY(20px); transition: transform 0.2s;
+  }
+  .link-popup.open .link-popup-box { transform: translateY(0); }
+  .link-popup-title { font-size: 16px; font-weight: 800; margin-bottom: 16px; }
+  .link-display {
+    background: var(--card2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-size: 12px; color: var(--muted2);
+    word-break: break-all; margin-bottom: 14px; direction: ltr; text-align: left;
+  }
+  .link-popup-btns { display: flex; gap: 10px; }
+
+  @media (max-width: 600px) {
+    .page { padding: 20px 16px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .slot-card { flex-wrap: wrap; }
+    .form-row { grid-template-columns: 1fr; }
+    .navbar { padding: 0 16px; }
+    .seller-name { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a class="navbar-logo" href="/">
+    <div class="logo-type"><span class="lt-m">M</span><span class="lt-r">r</span><span class="lt-10">10</span><span class="lt-x">x</span></div>
+  </a>
+  <div class="navbar-right">
+    <span class="seller-name" id="seller-name-display"></span>
+    <button class="btn-logout" onclick="logout()">تسجيل الخروج</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('slots', this)">🔗 الروابط</button>
+    <button class="tab-btn" onclick="switchTab('mailboxes', this)">📬 صناديق البريد</button>
+  </div>
+
+  <!-- ══ TAB: SLOTS ══ -->
+  <div id="tab-slots">
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card"><div class="stat-label">إجمالي الروابط</div><div class="stat-value amber" id="stat-total">—</div></div>
+      <div class="stat-card"><div class="stat-label">روابط نشطة</div><div class="stat-value green" id="stat-active">—</div></div>
+      <div class="stat-card"><div class="stat-label">استُنفدت</div><div class="stat-value red" id="stat-exhausted">—</div></div>
+    </div>
+
+    <!-- ══ SUBSCRIPTION RENEWAL ══ -->
+    <div id="renewal-banner" style="display:none; margin-bottom:20px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 22px; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div style="width:42px;height:42px;border-radius:50%;background:rgba(245,159,11,0.12);border:1.5px solid rgba(245,159,11,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="20" height="20" fill="none" stroke="#f59f0b" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div>
+          <div id="renewal-title" style="font-weight:700;font-size:14px;color:var(--text);">تجديد الاشتراك</div>
+          <div id="renewal-sub" style="font-size:13px;color:var(--muted);margin-top:2px;">—</div>
+        </div>
+      </div>
+      <a id="renewal-btn" href="https://wa.me/966500000000?text=أريد%20تجديد%20اشتراك%20Mr10x" target="_blank" rel="noopener"
+         style="display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#0e0e12;font-family:inherit;font-size:13px;font-weight:800;padding:10px 20px;border-radius:10px;text-decoration:none;white-space:nowrap;transition:background 0.2s;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.996 2C6.472 2 2 6.477 2 12.004c0 1.993.577 3.85 1.572 5.418L2 22l4.682-1.542A9.952 9.952 0 0 0 11.996 22C17.52 22 22 17.523 22 12.004 22 6.477 17.52 2 11.996 2z"/></svg>
+        جدد عبر واتساب
+      </a>
+    </div>
+
+    <div class="sec-header">
+      <div>
+        <div class="sec-title">الروابط</div>
+        <div class="sec-sub">كل رابط يخص عميلاً واحداً — محاولتان فقط</div>
+      </div>
+      <button class="btn-primary" onclick="openSlotModal()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        رابط جديد
+      </button>
+    </div>
+
+    <div id="slots-container"><div class="spinner"></div></div>
+  </div>
+
+  <!-- ══ TAB: MAILBOXES ══ -->
+  <div id="tab-mailboxes" style="display:none">
+    <div class="sec-header">
+      <div>
+        <div class="sec-title">صناديق البريد</div>
+        <div class="sec-sub">الإيميلات المربوطة — منها تُسحب الأكواد</div>
+      </div>
+      <button class="btn-primary" onclick="openMailboxModal()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        إضافة صندوق
+      </button>
+    </div>
+    <div id="mailboxes-container"><div class="spinner"></div></div>
+  </div>
+
+</div>
+
+<!-- ══ MODAL: New Slot ══ -->
+<div class="modal-overlay" id="slot-modal">
+  <div class="modal">
+    <div class="modal-title">🔗 رابط جديد</div>
+
+    <div class="form-group">
+      <label class="form-label">اسم الخدمة (يظهر للعميل)</label>
+      <input class="form-input" id="slot-label" placeholder="مثال: Netflix Premium" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">صندوق البريد</label>
+      <select class="form-input" id="slot-mailbox" onchange="autoFillSlotEmail()"></select>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">إيميل الحساب (اختياري)</label>
+        <input class="form-input" id="slot-email" placeholder="user@example.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">كلمة مرور الحساب (اختياري)</label>
+        <div style="position:relative">
+          <input class="form-input" id="slot-pass" type="password" placeholder="••••••••" style="padding-left:38px" />
+          <button type="button" onclick="(function(b){const i=document.getElementById('slot-pass');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈'})(this)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1">👁</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">عدد الروابط</label>
+      <input class="form-input" id="slot-count" type="number" value="1" min="1" max="50" />
+    </div>
+
+    <div id="slot-err" style="color:var(--red);font-size:13px;margin-top:4px;display:none;"></div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeSlotModal()">إلغاء</button>
+      <button class="btn-primary" id="slot-submit-btn" onclick="createSlot()">إنشاء الرابط</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Edit Slot ══ -->
+<div class="modal-overlay" id="edit-slot-modal">
+  <div class="modal">
+    <div class="modal-title">✏️ تعديل الرابط</div>
+
+    <div class="form-group">
+      <label class="form-label">اسم الخدمة</label>
+      <input class="form-input" id="edit-slot-label" placeholder="مثال: Netflix Premium" />
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">إيميل الحساب</label>
+        <input class="form-input" id="edit-slot-email" placeholder="user@example.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">كلمة مرور الحساب</label>
+        <div style="position:relative">
+          <input class="form-input" id="edit-slot-pass" type="password" placeholder="••••••••" style="padding-left:38px" />
+          <button type="button" onclick="(function(b){const i=document.getElementById('edit-slot-pass');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈'})(this)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1">👁</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="edit-slot-err" style="color:var(--red);font-size:13px;margin-top:4px;display:none;"></div>
+
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn-secondary" id="edit-reset-btn" onclick="resetSlotAttempts()" style="font-size:12px;padding:7px 12px;">↺ إعادة ضبط المحاولات</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" onclick="closeEditModal()">إلغاء</button>
+        <button class="btn-primary" id="edit-submit-btn" onclick="updateSlot()">حفظ التعديلات</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: New Mailbox ══ -->
+<div class="modal-overlay" id="mailbox-modal">
+  <div class="modal">
+    <div class="modal-title">📬 ربط صندوق بريد</div>
+
+    <div class="form-group">
+      <label class="form-label">الإيميل</label>
+      <input class="form-input" id="mb-email" type="email" placeholder="example@gmail.com" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">كلمة المرور / App Password</label>
+      <div style="position:relative">
+        <input class="form-input" id="mb-pass" type="password" placeholder="••••••••" style="padding-left:38px" />
+        <button type="button" onclick="(function(b){const i=document.getElementById('mb-pass');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈'})(this)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1">👁</button>
+      </div>
+    </div>
+    <input type="hidden" id="mb-host" value="" />
+    <input type="hidden" id="mb-port" value="" />
+    <div class="form-group">
+      <label class="form-label">اسم للتعريف (اختياري)</label>
+      <input class="form-input" id="mb-label" placeholder="مثال: حساب Netflix الرئيسي" />
+    </div>
+
+    <div id="mb-err" style="color:var(--red);font-size:13px;margin-top:4px;display:none;line-height:1.5;"></div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeMailboxModal()">إلغاء</button>
+      <button class="btn-primary" id="mb-submit-btn" onclick="addMailbox()">ربط الصندوق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LINK POPUP ══ -->
+<div class="link-popup" id="link-popup">
+  <div class="link-popup-box">
+    <div class="link-popup-title">✅ تم إنشاء الرابط</div>
+    <div class="link-display" id="link-display-url"></div>
+    <div class="link-popup-btns">
+      <button class="btn-primary" onclick="copyPopupLink()">نسخ الرابط</button>
+      <button class="btn-cancel" style="flex:1" onclick="closeLinkPopup()">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast">تم</div>
+
+<script>
+const API = window.MR10X_API || '';
+const FRONT = location.origin;
+
+// ── Auth ───────────────────────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('mr10x_token'); }
+
+async function apiFetch(path, opts = {}) {
+  const token = getToken();
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(opts.headers || {})
+    }
+  });
+  return res;
+}
+
+function logout() {
+  localStorage.removeItem('mr10x_token');
+  location.href = '/index.html';
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 2800);
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-slots').style.display = name === 'slots' ? '' : 'none';
+  document.getElementById('tab-mailboxes').style.display = name === 'mailboxes' ? '' : 'none';
+  if (name === 'mailboxes') loadMailboxes();
+}
+
+// ── Load slots ─────────────────────────────────────────────────────────────
+let slotsCache = [];
+
+async function loadSlots() {
+  const container = document.getElementById('slots-container');
+  container.innerHTML = '<div class="spinner"></div>';
+  try {
+    const r = await apiFetch('/api/slots');
+    if (r.status === 401) { logout(); return; }
+    slotsCache = await r.json();
+    renderSlots(slotsCache);
+    updateStats(slotsCache);
+  } catch(e) {
+    container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">خطأ في تحميل البيانات</p>';
+  }
+}
+
+function renderSlots(slots) {
+  const container = document.getElementById('slots-container');
+  if (!slots.length) {
+    container.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🔗</div>
+        <div class="empty-title">لا توجد روابط بعد</div>
+        <div class="empty-sub">أنشئ رابطاً لكل عميل من الزر أعلاه</div>
+        <button class="btn-primary" onclick="openSlotModal()">+ رابط جديد</button>
+      </div>`;
+    return;
+  }
+
+  const html = slots.map(s => {
+    const attempts = typeof s.code_attempts === 'number' ? s.code_attempts : 0;
+    const left = Math.max(0, 2 - attempts);
+    const attClass = left === 2 ? 'ok' : left === 1 ? 'warn' : 'none';
+    const attLabel = left === 0 ? 'استُنفدت' : `${left}/2 محاولة`;
+    const isActive = left > 0;
+    const slotUrl = `${FRONT}/code.html?t=${s.token}`;
+    // F-12: escape user-supplied values before inserting into innerHTML
+    const mailMeta = s.mailbox_email ? `📬 ${escHtml(s.mailbox_email)}` : '';
+    const emailMeta = s.account_email ? `👤 ${escHtml(s.account_email)}` : '';
+
+    return `
+    <div class="slot-card">
+      <div class="slot-status-dot ${isActive ? 'active' : 'exhausted'}"></div>
+      <div class="slot-info">
+        <div class="slot-label">${escHtml(s.label)}</div>
+        <div class="slot-meta">
+          ${mailMeta ? `<span>${mailMeta}</span>` : ''}
+          ${emailMeta ? `<span>${emailMeta}</span>` : ''}
+          <span>📅 ${formatDate(s.created_at)}</span>
+        </div>
+      </div>
+      <div class="slot-attempts ${attClass}">${attLabel}</div>
+      <div class="slot-actions">
+        <button class="slot-link-btn" onclick="showLink('${s.token}')">عرض الرابط</button>
+        <button class="btn-edit" title="تعديل" onclick="openEditSlot('${s.id}')">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-danger" onclick="deleteSlot('${s.id}', '${escHtml(s.label)}')">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M3 6h18M19 6l-1 14H6L5 6M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `<div class="slots-grid">${html}</div>`;
+}
+
+function updateStats(slots) {
+  const total = slots.length;
+  const exhausted = slots.filter(s => (s.code_attempts || 0) >= 2).length;
+  const active = total - exhausted;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-exhausted').textContent = exhausted;
+}
+
+// ── Slot modal ─────────────────────────────────────────────────────────────
+let mailboxesCache = [];
+
+function openSlotModal() {
+  document.getElementById('slot-label').value = '';
+  document.getElementById('slot-email').value = '';
+  document.getElementById('slot-pass').value = '';
+  document.getElementById('slot-count').value = '1';
+  document.getElementById('slot-err').style.display = 'none';
+  loadMailboxesForSelect(); // async — runs after clearing, sets email when done
+  document.getElementById('slot-modal').classList.add('open');
+  setTimeout(() => document.getElementById('slot-label').focus(), 100);
+}
+function closeSlotModal() { document.getElementById('slot-modal').classList.remove('open'); }
+
+function autoFillSlotEmail() {
+  const sel = document.getElementById('slot-mailbox');
+  const emailInput = document.getElementById('slot-email');
+  const selectedId = String(sel.value);
+  const box = mailboxesCache.find(b => String(b.id) === selectedId);
+  if (box) emailInput.value = box.email;
+}
+
+async function loadMailboxesForSelect() {
+  const sel = document.getElementById('slot-mailbox');
+  sel.innerHTML = '<option value="">جارٍ التحميل...</option>';
+  try {
+    const r = await apiFetch('/api/mailboxes');
+    const boxes = await r.json();
+    mailboxesCache = boxes;
+    if (!boxes.length) {
+      sel.innerHTML = '<option value="">لا يوجد صندوق بريد — أضف واحداً أولاً</option>';
+    } else {
+      sel.innerHTML = boxes.map(b =>
+        `<option value="${b.id}" data-email="${b.email}">${b.email}${b.label ? ' — ' + b.label : ''}</option>`
+      ).join('');
+      // auto-fill email field directly from first box (avoids any sel.value timing issue)
+      const emailInput = document.getElementById('slot-email');
+      emailInput.value = boxes[0].email;
+    }
+  } catch(e) {
+    console.error('[mr10x] loadMailboxesForSelect error:', e);
+    sel.innerHTML = '<option value="">فشل التحميل</option>';
+  }
+}
+
+async function createSlot() {
+  const label = document.getElementById('slot-label').value.trim();
+  const mailbox_id = document.getElementById('slot-mailbox').value;
+  const account_email = document.getElementById('slot-email').value.trim();
+  const account_password = document.getElementById('slot-pass').value;
+  const count = parseInt(document.getElementById('slot-count').value) || 1;
+  const errEl = document.getElementById('slot-err');
+
+  if (!label) { showErr(errEl, 'اكتب اسم الخدمة'); return; }
+  if (!mailbox_id) { showErr(errEl, 'اختر صندوق بريد'); return; }
+
+  const btn = document.getElementById('slot-submit-btn');
+  btn.textContent = 'جارٍ الإنشاء...'; btn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const r = await apiFetch('/api/slots', {
+      method: 'POST',
+      body: JSON.stringify({ label, mailbox_id, account_email, account_password, count })
+    });
+    const data = await r.json();
+    if (!r.ok) { showErr(errEl, data.error || 'خطأ'); return; }
+
+    closeSlotModal();
+    loadSlots();
+
+    // إظهار الرابط مباشرة إذا كان رابط واحد
+    if (data.length === 1) {
+      showLinkDirect(data[0].token);
+    } else {
+      showToast(`✅ تم إنشاء ${data.length} رابط`);
+    }
+  } catch(e) {
+    showErr(errEl, 'خطأ في الاتصال');
+  } finally {
+    btn.textContent = 'إنشاء الرابط'; btn.disabled = false;
+  }
+}
+
+// ── Link popup ─────────────────────────────────────────────────────────────
+let currentPopupUrl = '';
+
+function showLink(token) {
+  currentPopupUrl = `${FRONT}/code.html?t=${token}`;
+  document.getElementById('link-display-url').textContent = currentPopupUrl;
+  document.getElementById('link-popup').classList.add('open');
+}
+function showLinkDirect(token) { showLink(token); }
+function closeLinkPopup() { document.getElementById('link-popup').classList.remove('open'); }
+
+function copyPopupLink() {
+  navigator.clipboard.writeText(currentPopupUrl).then(() => {
+    showToast('تم نسخ الرابط ✓');
+    closeLinkPopup();
+  });
+}
+
+// ── Edit slot ──────────────────────────────────────────────────────────────
+let editingSlotId = null;
+
+function openEditSlot(id) {
+  const slot = slotsCache.find(s => s.id === id);
+  if (!slot) return;
+  editingSlotId = id;
+  document.getElementById('edit-slot-label').value = slot.label || '';
+  document.getElementById('edit-slot-email').value = slot.account_email || '';
+  document.getElementById('edit-slot-pass').value = '';
+  document.getElementById('edit-slot-err').style.display = 'none';
+  // إظهار زر reset فقط إذا كانت المحاولات منتهية
+  const attempts = typeof slot.code_attempts === 'number' ? slot.code_attempts : 0;
+  document.getElementById('edit-reset-btn').style.display = attempts >= 2 ? '' : 'none';
+  document.getElementById('edit-slot-modal').classList.add('open');
+  setTimeout(() => document.getElementById('edit-slot-email').focus(), 100);
+}
+function closeEditModal() { document.getElementById('edit-slot-modal').classList.remove('open'); editingSlotId = null; }
+
+async function updateSlot() {
+  if (!editingSlotId) return;
+  const label = document.getElementById('edit-slot-label').value.trim();
+  const account_email = document.getElementById('edit-slot-email').value.trim();
+  const account_password = document.getElementById('edit-slot-pass').value;
+  const errEl = document.getElementById('edit-slot-err');
+
+  if (!label) { showErr(errEl, 'اكتب اسم الخدمة'); return; }
+
+  const btn = document.getElementById('edit-submit-btn');
+  btn.textContent = 'جارٍ الحفظ...'; btn.disabled = true;
+  errEl.style.display = 'none';
+
+  const body = { label, account_email };
+  if (account_password) body.account_password = account_password;
+
+  try {
+    const r = await apiFetch(`/api/slots/${editingSlotId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) { showErr(errEl, 'فشل الحفظ'); return; }
+    closeEditModal();
+    showToast('✅ تم حفظ التعديلات');
+    loadSlots();
+  } catch(e) {
+    showErr(errEl, 'خطأ في الاتصال');
+  } finally {
+    btn.textContent = 'حفظ التعديلات'; btn.disabled = false;
+  }
+}
+
+async function resetSlotAttempts() {
+  if (!editingSlotId) return;
+  const btn = document.getElementById('edit-reset-btn');
+  btn.textContent = '...'; btn.disabled = true;
+  try {
+    const r = await apiFetch(`/api/slots/${editingSlotId}/reset`, { method: 'PATCH' });
+    if (!r.ok) { showToast('فشل الإعادة', 'error'); return; }
+    showToast('✅ تم إعادة ضبط المحاولات');
+    btn.style.display = 'none';
+    loadSlots();
+  } catch(e) { showToast('خطأ', 'error'); }
+  finally { btn.textContent = '↺ إعادة ضبط المحاولات'; btn.disabled = false; }
+}
+
+// ── Delete slot ────────────────────────────────────────────────────────────
+async function deleteSlot(id, label) {
+  if (!confirm(`حذف رابط "${label}"؟`)) return;
+  try {
+    await apiFetch(`/api/slots/${id}`, { method: 'DELETE' });
+    showToast('تم الحذف');
+    loadSlots();
+  } catch(e) { showToast('فشل الحذف', 'error'); }
+}
+
+// ── Mailboxes ──────────────────────────────────────────────────────────────
+async function loadMailboxes() {
+  const container = document.getElementById('mailboxes-container');
+  container.innerHTML = '<div class="spinner"></div>';
+  try {
+    const r = await apiFetch('/api/mailboxes');
+    const boxes = await r.json();
+    mailboxesCache = boxes;
+    renderMailboxes(boxes);
+  } catch(e) {
+    container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">خطأ</p>';
+  }
+}
+
+function renderMailboxes(boxes) {
+  const container = document.getElementById('mailboxes-container');
+  if (!boxes.length) {
+    container.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">📬</div>
+        <div class="empty-title">لا يوجد صندوق بريد</div>
+        <div class="empty-sub">أضف الإيميل اللي فيه أكواد التحقق من الزر فوق</div>
+      </div>`;
+    return;
+  }
+
+  const html = boxes.map(b => {
+    const st = b.status || 'pending';
+    const stLabel = st === 'connected' ? 'متصل' : st === 'error' ? 'خطأ' : 'جارٍ الاختبار';
+    return `
+    <div class="mailbox-card">
+      <div class="mailbox-icon">📬</div>
+      <div class="mailbox-info">
+        <div class="mailbox-email">${escHtml(b.email)}</div>
+        <div class="mailbox-meta">${b.label ? escHtml(b.label) + ' · ' : ''}${b.imap_host}:${b.imap_port}</div>
+      </div>
+      <span class="status-badge ${st}">${stLabel}</span>
+      <button class="btn-danger" onclick="deleteMailbox('${b.id}', '${escHtml(b.email)}')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M3 6h18M19 6l-1 14H6L5 6M9 6V4h6v2"/></svg>
+      </button>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `<div class="slots-grid">${html}</div>`;
+}
+
+// ── Mailbox modal ──────────────────────────────────────────────────────────
+function openMailboxModal() {
+  ['mb-email','mb-pass','mb-host','mb-port','mb-label'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('mb-err').style.display = 'none';
+  document.getElementById('mailbox-modal').classList.add('open');
+  setTimeout(() => document.getElementById('mb-email').focus(), 100);
+}
+function closeMailboxModal() { document.getElementById('mailbox-modal').classList.remove('open'); }
+
+async function addMailbox() {
+  const email = document.getElementById('mb-email').value.trim();
+  const password = document.getElementById('mb-pass').value;
+  const host = document.getElementById('mb-host').value.trim();
+  const port = document.getElementById('mb-port').value.trim();
+  const label = document.getElementById('mb-label').value.trim();
+  const errEl = document.getElementById('mb-err');
+
+  if (!email) { showErr(errEl, 'أدخل الإيميل'); return; }
+  if (!password) { showErr(errEl, 'أدخل كلمة المرور'); return; }
+
+  const btn = document.getElementById('mb-submit-btn');
+  btn.textContent = 'جارٍ الاختبار...'; btn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const body = { email, password, label };
+    if (host) body.host = host;
+    if (port) body.port = Number(port);
+
+    const r = await apiFetch('/api/mailboxes', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (!r.ok) { showErr(errEl, data.error || 'فشل الاتصال'); return; }
+
+    closeMailboxModal();
+    loadMailboxes();
+    showToast('✅ تم ربط الصندوق');
+  } catch(e) {
+    showErr(errEl, 'خطأ في الاتصال');
+  } finally {
+    btn.textContent = 'ربط الصندوق'; btn.disabled = false;
+  }
+}
+
+async function deleteMailbox(id, email) {
+  if (!confirm(`حذف صندوق "${email}"؟\nسيتم حذف جميع الروابط المرتبطة به.`)) return;
+  try {
+    await apiFetch(`/api/mailboxes/${id}`, { method: 'DELETE' });
+    showToast('تم الحذف');
+    loadMailboxes();
+  } catch(e) { showToast('فشل الحذف', 'error'); }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(str) {
+  if (!str) return '';
+  const d = new Date(str);
+  return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+function showErr(el, msg) {
+  el.textContent = msg; el.style.display = 'block';
+}
+
+// ── Close modals on overlay click ─────────────────────────────────────────
+document.getElementById('slot-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('slot-modal')) closeSlotModal();
+});
+document.getElementById('mailbox-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('mailbox-modal')) closeMailboxModal();
+});
+document.getElementById('link-popup').addEventListener('click', e => {
+  if (e.target === document.getElementById('link-popup')) closeLinkPopup();
+});
+
+// ── Enter key in modals ────────────────────────────────────────────────────
+document.getElementById('slot-pass').addEventListener('keydown', e => { if (e.key === 'Enter') createSlot(); });
+document.getElementById('mb-pass').addEventListener('keydown', e => { if (e.key === 'Enter') addMailbox(); });
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  const token = getToken();
+  if (!token) { location.href = '/index.html'; return; }
+
+  try {
+    const r = await apiFetch('/api/me');
+    if (r.status === 401) { logout(); return; }
+    const me = await r.json();
+    document.getElementById('seller-name-display').textContent = me.name || me.email || '';
+
+    // ── Subscription renewal banner ──
+    const banner  = document.getElementById('renewal-banner');
+    const title   = document.getElementById('renewal-title');
+    const sub     = document.getElementById('renewal-sub');
+    const btn     = document.getElementById('renewal-btn');
+    const days    = me.subscription_days_left;
+
+    if (days === null || days === undefined) {
+      // unlimited / no expiry — hide banner
+      banner.style.display = 'none';
+    } else if (days <= 0) {
+      // expired
+      banner.style.display = 'flex';
+      banner.style.borderColor = 'rgba(239,68,68,0.3)';
+      title.textContent = 'انتهى اشتراكك';
+      title.style.color = '#ef4444';
+      sub.textContent = 'جدد الآن لاستعادة الوصول الكامل';
+      btn.textContent = '🔄 جدد الاشتراك';
+    } else if (days <= 7) {
+      // expiring soon
+      banner.style.display = 'flex';
+      banner.style.borderColor = 'rgba(245,159,11,0.3)';
+      title.textContent = `ينتهي اشتراكك خلال ${days} ${days === 1 ? 'يوم' : 'أيام'}`;
+      sub.textContent = 'جدد قبل انتهاء الصلاحية حتى لا تنقطع الخدمة';
+    } else {
+      // healthy — show subtle info
+      banner.style.display = 'flex';
+      banner.style.borderColor = 'rgba(34,197,94,0.2)';
+      title.textContent = 'الاشتراك نشط';
+      title.style.color = '#22c55e';
+      sub.textContent = `متبقي ${days} ${days === 1 ? 'يوم' : 'يوم'}`;
+      btn.style.background = 'var(--card2)';
+      btn.style.color = 'var(--text)';
+      btn.style.border = '1px solid var(--border)';
+      btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.996 2C6.472 2 2 6.477 2 12.004c0 1.993.577 3.85 1.572 5.418L2 22l4.682-1.542A9.952 9.952 0 0 0 11.996 22C17.52 22 22 17.523 22 12.004 22 6.477 17.52 2 11.996 2z"/></svg> تجديد مبكر`;
+    }
+  } catch(e) {}
+
+  loadSlots();
+}
+
+init();
+</script>
+</body>
+</html>

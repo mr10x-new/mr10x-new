@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-site-verification" content="FQtSYvE1JFcWkmogVCg9GcHmCFydLjkxURvKrjbjAfY" />
+  <title>Mr10x — منصة توصيل رموز OTP تلقائياً</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e12;
+      --surface: #17171d;
+      --surface2: #1f1f28;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(245,159,11,0.3);
+      --accent: #f59f0b;
+      --accent-dim: rgba(245,159,11,0.12);
+      --accent-glow: rgba(245,159,11,0.18);
+      --text: #f4f3ef;
+      --muted: #8a8898;
+      --green: #22c55e;
+      --radius: 14px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; right: 0; left: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 48px;
+      background: rgba(14,14,18,0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      text-decoration: none;
+      display: flex; align-items: center;
+    }
+    .logo-type { font-size: 24px; font-weight: 900; letter-spacing: -1.5px; color: var(--text); line-height: 1; }
+    .logo-type .lt-m  { font-weight: 900; font-size: 1em; color: var(--text); }
+    .logo-type .lt-r  { font-weight: 300; font-size: 0.72em; color: var(--muted); }
+    .logo-type .lt-10 { font-weight: 900; font-size: 1.05em; color: var(--accent); letter-spacing: -2px; }
+    .logo-type .lt-x  { font-weight: 700; font-size: 0.85em; color: var(--text); }
+    .nav-links { display: flex; gap: 6px; align-items: center; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 9px;
+      font-family: 'Tajawal', sans-serif; font-size: 14px; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: none; transition: all 0.18s;
+    }
+    .btn-ghost {
+      background: transparent; color: var(--muted);
+    }
+    .btn-ghost:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .btn-primary {
+      background: var(--accent);
+      color: #0e0e12;
+      font-weight: 700;
+    }
+    .btn-primary:hover {
+      background: #fbbf24;
+      transform: translateY(-1px);
+    }
+    .btn-lg { padding: 14px 32px; font-size: 16px; border-radius: 11px; }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--border-hover); color: var(--accent); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 130px 24px 80px;
+      position: relative;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; bottom: 0; right: 0; left: 0; top: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% 30%, rgba(245,159,11,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid rgba(245,159,11,0.25);
+      background: rgba(245,159,11,0.07);
+      border-radius: 100px; padding: 5px 14px;
+      font-size: 13px; color: var(--accent);
+      margin-bottom: 32px;
+      font-weight: 500;
+    }
+    .hero-eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+    .hero-number {
+      font-size: clamp(100px, 20vw, 220px);
+      font-weight: 900;
+      line-height: 0.85;
+      color: var(--accent);
+      letter-spacing: -6px;
+      margin-bottom: 24px;
+      position: relative;
+      display: inline-block;
+    }
+
+    .hero h1 {
+      font-size: clamp(22px, 3.5vw, 38px); font-weight: 700;
+      line-height: 1.4; margin-bottom: 20px;
+      color: var(--text);
+      max-width: 680px;
+    }
+    .hero p {
+      font-size: clamp(15px, 2vw, 18px); color: var(--muted);
+      max-width: 500px; margin: 0 auto 40px; font-weight: 400; line-height: 1.75;
+    }
+    .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+    /* mock widget */
+    .hero-mockup {
+      margin-top: 72px; width: 100%; max-width: 400px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px; padding: 24px;
+      text-align: right;
+      position: relative;
+    }
+    .hero-mockup::before {
+      content: '';
+      position: absolute; inset: -1px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(245,159,11,0.2), transparent, rgba(245,159,11,0.05));
+      z-index: -1;
+    }
+    .mock-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .mock-label { font-size: 12px; color: var(--muted); }
+    .mock-service { font-size: 15px; font-weight: 700; }
+    .mock-status {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--green); font-weight: 600;
+    }
+    .mock-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    .mock-code-box {
+      background: var(--bg);
+      border-radius: 11px; padding: 18px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .mock-code { font-size: 32px; font-weight: 900; letter-spacing: 8px; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .mock-copy {
+      background: var(--accent-dim);
+      border: 1px solid rgba(245,159,11,0.2);
+      color: var(--accent); border-radius: 7px; padding: 7px 14px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+    }
+    .mock-timer { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+    .mock-timer-bar {
+      height: 2px; flex: 1; background: var(--surface2); border-radius: 2px; overflow: hidden;
+    }
+    .mock-timer-fill { height: 100%; width: 72%; background: var(--accent); border-radius: 2px; }
+
+    /* ── LOGOS ── */
+    .logos-wrap {
+      padding: 48px 24px 56px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .logos-label { font-size: 12px; color: var(--muted); margin-bottom: 24px; font-weight: 500; }
+    .logos-row {
+      display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center;
+    }
+    .logo-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px; padding: 8px 18px;
+      font-size: 13px; font-weight: 500; color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+      transition: border-color 0.18s, color 0.18s;
+    }
+    .logo-pill:hover { border-color: var(--border-hover); color: var(--text); }
+    .logo-pill img { width: 18px; height: 18px; object-fit: contain; border-radius: 3px; }
+
+    /* ── SECTION WRAPPER ── */
+    .section-wrap {
+      max-width: 1080px; margin: 0 auto; padding: 80px 24px;
+    }
+    .section-head { margin-bottom: 56px; }
+    .section-kicker {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 2.5px; color: var(--accent);
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: clamp(26px, 3.5vw, 40px); font-weight: 800;
+      line-height: 1.25; margin-bottom: 14px;
+    }
+    .section-sub { font-size: 16px; color: var(--muted); max-width: 460px; line-height: 1.7; }
+    .divider { border: none; border-top: 1px solid var(--border); }
+
+    /* ── HOW IT WORKS ── */
+    .how-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--border);
+    }
+    .step-card {
+      background: var(--surface);
+      padding: 32px 28px;
+      transition: background 0.18s;
+    }
+    .step-card:hover { background: var(--surface2); }
+    .step-num {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 2px; color: var(--accent);
+      margin-bottom: 20px; display: block;
+    }
+    .step-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+    .step-card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+    /* ── FEATURES ── */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--border);
+    }
+    .feat-card {
+      background: var(--surface);
+      padding: 28px;
+      display: flex; gap: 18px; align-items: flex-start;
+      transition: background 0.18s;
+    }
+    .feat-card:hover { background: var(--surface2); }
+    .feat-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: var(--accent-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .feat-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .feat-card p { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+    /* ── PRICING ── */
+    .pricing-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 20px;
+    }
+    .price-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px;
+      transition: border-color 0.18s, transform 0.18s;
+    }
+    .price-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-3px); }
+    .price-card.popular {
+      border-color: rgba(245,159,11,0.4);
+      background: linear-gradient(145deg, #1a1a0e 0%, #17171d 60%);
+      position: relative;
+    }
+    .popular-badge {
+      position: absolute; top: -12px; right: 28px;
+      background: var(--accent);
+      color: #0e0e12; font-size: 12px; font-weight: 800;
+      padding: 3px 14px; border-radius: 100px;
+      letter-spacing: 0.5px;
+    }
+    .price-tier { font-size: 13px; color: var(--muted); margin-bottom: 20px; font-weight: 500; }
+    .price-amount {
+      font-size: 54px; font-weight: 900; margin-bottom: 2px;
+      color: var(--text);
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .price-amount .currency { font-size: 20px; font-weight: 500; color: var(--muted); }
+    .price-period { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+    .price-features { list-style: none; margin-bottom: 28px; }
+    .price-features li {
+      font-size: 13.5px; color: var(--muted); padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .price-features li:last-child { border-bottom: none; }
+    .check { color: var(--accent); font-weight: 700; flex-shrink: 0; }
+
+    /* ── TESTIMONIALS ── */
+    .testi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 16px;
+    }
+    .testi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px;
+      transition: border-color 0.18s;
+    }
+    .testi-card:hover { border-color: rgba(245,159,11,0.2); }
+    .testi-stars { color: var(--accent); font-size: 12px; letter-spacing: 2px; margin-bottom: 14px; }
+    .testi-text { font-size: 14px; color: var(--text); line-height: 1.8; margin-bottom: 20px; }
+    .testi-author { display: flex; align-items: center; gap: 12px; }
+    .testi-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--surface2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .testi-name { font-weight: 700; font-size: 13px; }
+    .testi-role { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+    /* ── FAQ ── */
+    .faq-list {
+      max-width: 680px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 11px; overflow: hidden;
+      transition: border-color 0.18s;
+    }
+    .faq-item.open { border-color: rgba(245,159,11,0.3); }
+    .faq-q {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 17px 20px; cursor: pointer;
+      font-size: 15px; font-weight: 600; color: var(--text); user-select: none;
+    }
+    .faq-q:hover { color: var(--accent); }
+    .faq-icon { flex-shrink: 0; font-size: 18px; color: var(--accent); transition: transform 0.22s; }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-a {
+      display: none; padding: 0 20px 17px;
+      font-size: 14px; color: var(--muted); line-height: 1.8;
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ── CTA ── */
+    .cta-section {
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 100px 24px; text-align: center;
+      background: radial-gradient(ellipse 50% 80% at 50% 50%, rgba(245,159,11,0.05) 0%, transparent 70%);
+    }
+    .cta-section h2 { font-size: clamp(28px, 5vw, 48px); font-weight: 900; margin-bottom: 14px; }
+    .cta-section p { font-size: 17px; color: var(--muted); margin-bottom: 36px; }
+
+    /* ── FOOTER ── */
+    footer { text-align: center; padding: 48px 24px 36px; }
+    .footer-logo {
+      margin-bottom: 20px; display: flex; align-items: center;
+      justify-content: center;
+    }
+    .footer-links {
+      display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-whatsapp {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25);
+      color: #4ade80; border-radius: 100px; padding: 10px 24px;
+      text-decoration: none; font-size: 14px; font-weight: 600;
+      margin-bottom: 28px; transition: all 0.18s;
+    }
+    .footer-whatsapp:hover { background: rgba(34,197,94,0.18); border-color: rgba(34,197,94,0.4); }
+    .footer-copy { font-size: 12px; color: rgba(138,136,152,0.45); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 700px) {
+      nav { padding: 14px 20px; }
+      .hero { padding: 110px 20px 60px; }
+      .hero-number { font-size: clamp(80px, 22vw, 150px); letter-spacing: -3px; }
+      .hero-mockup { max-width: 100%; }
+      .hero-btns .btn-lg { flex: 1; min-width: 140px; justify-content: center; }
+      .section-wrap { padding: 60px 20px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="logo-type"><span class="lt-m">M</span><span class="lt-r">r</span><span class="lt-10">10</span><span class="lt-x">x</span></div>
+  </a>
+  <div class="nav-links">
+    <a href="#how" class="btn btn-ghost">كيف يعمل</a>
+    <a href="#pricing" class="btn btn-ghost">الأسعار</a>
+    <a href="index.html" class="btn btn-ghost">تسجيل الدخول</a>
+    <a href="index.html?register=1" class="btn btn-primary">ابدأ الآن</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-logo" style="font-size: 48px; margin-bottom: 24px; line-height: 1;">
+    <div class="logo-type"><span class="lt-m">M</span><span class="lt-r">r</span><span class="lt-10">10</span><span class="lt-x">x</span></div>
+  </div>
+  <div class="hero-eyebrow">
+    <span class="hero-eyebrow-dot"></span>
+    منصة موثوقة لتوصيل رموز OTP
+  </div>
+
+  <div class="hero-number">10×</div>
+
+  <h1>وصّل رموز OTP لزبائنك بشكل تلقائي وفوري</h1>
+  <p>ربط صناديق الإيميل — استخراج الكود تلقائياً — تسليمه للزبون بزر واحد. بدون تدخل يدوي.</p>
+
+  <div class="hero-btns">
+    <a href="index.html?register=1" class="btn btn-primary btn-lg">ابدأ مجاناً</a>
+    <a href="#how" class="btn btn-outline btn-lg">شوف كيف يشتغل</a>
+  </div>
+
+  <div class="hero-mockup">
+    <div class="mock-top">
+      <div>
+        <div class="mock-label">رابط الزبون</div>
+        <div class="mock-service">🎬 شاهد VIP</div>
+      </div>
+      <div class="mock-status"><span class="mock-status-dot"></span> نشط</div>
+    </div>
+    <div class="mock-code-box">
+      <div>
+        <div style="font-size:11px; color:var(--muted); margin-bottom:4px">رمز التحقق</div>
+        <div class="mock-code">748 291</div>
+      </div>
+      <div class="mock-copy">نسخ</div>
+    </div>
+    <div class="mock-timer">
+      <span>⏱ 4:32</span>
+      <div class="mock-timer-bar"><div class="mock-timer-fill"></div></div>
+      <span>ينتهي</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── LOGOS ── -->
+<div class="logos-wrap">
+  <div class="logos-label">يعمل مع جميع المنصات التي ترسل رموز OTP على الإيميل</div>
+  <div class="logos-row">
+    <div class="logo-pill"><img src="https://logo.clearbit.com/shahid.net" alt="شاهد" onerror="this.style.display='none'">شاهد</div>
+    <div class="logo-pill"><img src="https://logo.clearbit.com/netflix.com" alt="Netflix" onerror="this.style.display='none'">Netflix</div>
+    <div class="logo-pill"><img src="https://logo.clearbit.com/spotify.com" alt="Spotify" onerror="this.style.display='none'">Spotify</div>
+    <div class="logo-pill"><img src="https://logo.clearbit.com/playstation.com" alt="PlayStation" onerror="this.style.display='none'">PlayStation</div>
+    <div class="logo-pill"><img src="https://logo.clearbit.com/amazon.com" alt="Amazon" onerror="this.style.display='none'">Amazon</div>
+    <div class="logo-pill"><img src="https://logo.clearbit.com/stc.com.sa" alt="STC" onerror="this.style.display='none'">STC TV</div>
+    <div class="logo-pill"><img src="https://logo.clearbit.com/disneyplus.com" alt="Disney+" onerror="this.style.display='none'">Disney+</div>
+    <div class="logo-pill" style="color: var(--accent);">+ المزيد</div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── HOW IT WORKS ── -->
+<div class="section-wrap" id="how">
+  <div class="section-head">
+    <div class="section-kicker">كيف يعمل</div>
+    <div class="section-title">أربع خطوات وتنتهي</div>
+    <p class="section-sub">لا تعقيد، لا إعدادات صعبة. في دقائق تكون جاهز.</p>
+  </div>
+  <div class="how-grid">
+    <div class="step-card">
+      <span class="step-num">خطوة 01</span>
+      <h3>سجّل متجرك</h3>
+      <p>أنشئ حسابك على Mr10x. بعد الموافقة على طلبك، تحصل على لوحة تحكم كاملة.</p>
+    </div>
+    <div class="step-card">
+      <span class="step-num">خطوة 02</span>
+      <h3>اربط صندوق إيميل</h3>
+      <p>اربط الإيميل الخاص بالخدمة (Gmail، Outlook، أي إيميل). النظام يراقب الرسائل تلقائياً.</p>
+    </div>
+    <div class="step-card">
+      <span class="step-num">خطوة 03</span>
+      <h3>أنشئ رابط للزبون</h3>
+      <p>كل زبون يحصل على رابط خاص به. تضع فيه بيانات حسابه وسيفتح صفحة بسيطة تعرض الكود تلقائياً.</p>
+    </div>
+    <div class="step-card">
+      <span class="step-num">خطوة 04</span>
+      <h3>الكود يوصل تلقائياً</h3>
+      <p>عندما تصل رسالة OTP للإيميل، يظهر الكود فوراً عند الزبون. يضغط نسخ وانتهى.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── FEATURES ── -->
+<div class="section-wrap" id="features">
+  <div class="section-head">
+    <div class="section-kicker">المميزات</div>
+    <div class="section-title">كل ما تحتاجه في مكان واحد</div>
+  </div>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">⚡</div>
+      <div>
+        <h3>توصيل فوري</h3>
+        <p>الكود يصل للزبون في ثوانٍ من لحظة وصوله للإيميل. لا انتظار، لا تأخير.</p>
+      </div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔗</div>
+      <div>
+        <h3>روابط مخصصة</h3>
+        <p>كل زبون يملك رابط خاص به. شارك الرابط مرة وهو يرجع كل مرة يحتاج كود.</p>
+      </div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📬</div>
+      <div>
+        <h3>يعمل مع أي إيميل</h3>
+        <p>Gmail، Outlook، Yahoo، iCloud، Zoho — أي سيرفر IMAP مدعوم.</p>
+      </div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">👤</div>
+      <div>
+        <h3>بيانات الحساب</h3>
+        <p>احفظ إيميل وباسورد الحساب في الرابط. الزبون يشوفها مع الكود في صفحة واحدة.</p>
+      </div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🛡️</div>
+      <div>
+        <h3>بدون تدخل يدوي</h3>
+        <p>فتح الإيميل، قراءة الكود، إرساله للزبون — كل شيء يحصل تلقائياً.</p>
+      </div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📊</div>
+      <div>
+        <h3>لوحة تحكم واضحة</h3>
+        <p>شوف كل صناديقك وروابطك وحالة الاتصال من مكان واحد.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── PRICING ── -->
+<div class="section-wrap" id="pricing">
+  <div class="section-head">
+    <div class="section-kicker">الأسعار</div>
+    <div class="section-title">بسيط وواضح</div>
+    <p class="section-sub">اختار الباقة اللي تناسب نشاطك — وابدأ فوراً.</p>
+  </div>
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="price-tier">منصة من اختيارك</div>
+      <div class="price-amount">30 <span class="currency">ر.س</span></div>
+      <div class="price-period">/ شهرياً</div>
+      <ul class="price-features">
+        <li><span class="check">✓</span>حسابات وعملاء غير محدودين</li>
+        <li><span class="check">✓</span>تتبّع الأكواد تلقائياً</li>
+        <li><span class="check">✓</span>منصة واحدة من اختيارك</li>
+      </ul>
+      <a href="index.html?register=1" class="btn btn-outline" style="width:100%; justify-content:center">ابدأ الآن</a>
+    </div>
+    <div class="price-card popular">
+      <div class="popular-badge">الأكثر طلباً</div>
+      <div class="price-tier">الشامل</div>
+      <div class="price-amount">60 <span class="currency">ر.س</span></div>
+      <div class="price-period">/ شهرياً</div>
+      <ul class="price-features">
+        <li><span class="check">✓</span>كل المنصات بلا استثناء</li>
+        <li><span class="check">✓</span>كل طرق الربط + المصادقة الثنائية</li>
+        <li><span class="check">✓</span>حسابات وعملاء غير محدودين</li>
+        <li><span class="check">✓</span>تتبّع الأكواد تلقائياً</li>
+        <li><span class="check">✓</span>أولوية الدعم</li>
+      </ul>
+      <a href="index.html?register=1" class="btn btn-primary" style="width:100%; justify-content:center">ابدأ الآن</a>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">المتقدم</div>
+      <div class="price-amount">139 <span class="currency">ر.س</span></div>
+      <div class="price-period">/ شهرياً</div>
+      <ul class="price-features">
+        <li><span class="check">✓</span>كل مميزات الشامل</li>
+        <li><span class="check">✓</span>دعم مخصص على مدار الساعة</li>
+        <li><span class="check">✓</span>إعداد وتهيئة احترافي</li>
+        <li><span class="check">✓</span>طلب خاص حسب احتياجك</li>
+      </ul>
+      <a href="https://wa.me/966580198626" target="_blank" class="btn btn-outline" style="width:100%; justify-content:center">تواصل معنا</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── TESTIMONIALS ── -->
+<div class="section-wrap" id="testimonials" style="padding-top:0">
+  <hr class="divider" style="margin-bottom:80px">
+  <div class="section-head">
+    <div class="section-kicker">آراء العملاء</div>
+    <div class="section-title">ماذا قال من جرّبنا؟</div>
+    <p class="section-sub">تجارب حقيقية من تجار يستخدمون Mr10x يومياً</p>
+  </div>
+  <div class="testi-grid">
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">والله كنت أرسل الأكواد يدوي وكان يأخذ مني وقت. جربت Mr10x وصار الكود يوصل لحاله، راحت عني ضغطة كبيرة.</p>
+      <div class="testi-author">
+        <div class="testi-avatar">👨‍💼</div>
+        <div><div class="testi-name">خالد العتيبي</div><div class="testi-role">صاحب متجر اشتراكات</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">الكود يوصل سريع والزبون ما يحتاج يكلمني. بصراحة وفّر عليّ شي كثير، كنت أتعب بالرد الليل.</p>
+      <div class="testi-author">
+        <div class="testi-avatar">👩‍💻</div>
+        <div><div class="testi-name">نورة الشمري</div><div class="testi-role">تاجرة اشتراكات</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">ربطت الإيميل بسرعة وشغّلت على طول. ما توقعت يكون الإعداد سهل كذا. كويس.</p>
+      <div class="testi-author">
+        <div class="testi-avatar">🧑</div>
+        <div><div class="testi-name">فيصل الدوسري</div><div class="testi-role">بائع منصات ترفيه</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">جربت أشياء ثانية قبل بس Mr10x أبسط. الواجهة واضحة وعربية وما احتجت أسأل كثير.</p>
+      <div class="testi-author">
+        <div class="testi-avatar">🧑</div>
+        <div><div class="testi-name">عبدالله القحطاني</div><div class="testi-role">تاجر إلكتروني</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">الزبون يحصل الكود بنفسه وما يضطر يكلمني. ريّحني كثير خصوصاً اللي يجون ليلاً.</p>
+      <div class="testi-author">
+        <div class="testi-avatar">👩</div>
+        <div><div class="testi-name">ريم المطيري</div><div class="testi-role">تاجرة أونلاين</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">عندي زبائن كثار ومو قادر أرد على الكل بسرعة، دحين كل واحد يحصل كوده لحاله. شيء مريح.</p>
+      <div class="testi-author">
+        <div class="testi-avatar">👨</div>
+        <div><div class="testi-name">محمد السلمي</div><div class="testi-role">تاجر اشتراكات</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FAQ ── -->
+<div class="section-wrap" id="faq" style="padding-top:0; text-align:center">
+  <hr class="divider" style="margin-bottom:80px">
+  <div class="section-head">
+    <div class="section-kicker">الأسئلة الشائعة</div>
+    <div class="section-title">عندك سؤال؟</div>
+    <p class="section-sub" style="margin: 0 auto 48px">أجوبة على أكثر الاستفسارات اللي تصلنا</p>
+  </div>
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>كيف يصل الكود للزبون؟</span><span class="faq-icon">+</span></div>
+      <div class="faq-a">بمجرد وصول الإيميل على الحساب المربوط، يستخرج النظام الكود تلقائياً ويوفّره للزبون فوراً عبر رابط خاص. الزبون يفتح الرابط ويضغط "احصل على الكود" فيظهر له في ثوانٍ.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>هل يدعم جميع أنواع الإيميل؟</span><span class="faq-icon">+</span></div>
+      <div class="faq-a">نعم. يدعم جيميل، أوتلوك، هوتميل، ياهو، آي كلاود، وأي إيميل يدعم بروتوكول IMAP. إذا كان عندك إيميل شركة (custom domain) ما يهم، المهم يكون IMAP مفعّل.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>هل يمكن ربط أكثر من إيميل؟</span><span class="faq-icon">+</span></div>
+      <div class="faq-a">بالتأكيد. تقدر تربط أكثر من صندوق بريد في نفس الحساب، وكل صندوق يمكن ربطه بعدة روابط زبائن. الباقة الشاملة توفر لك مرونة أكبر.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>هل الزبون يحتاج تطبيق أو تسجيل؟</span><span class="faq-icon">+</span></div>
+      <div class="faq-a">لا أبداً. الزبون يفتح الرابط من أي متصفح عادي بدون تطبيق ولا حساب. مجرد رابط يفتح ويحصل على الكود فوراً.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>ماذا يحصل لو انتهى الكود أو ما وصل؟</span><span class="faq-icon">+</span></div>
+      <div class="faq-a">الأكواد تبقى صالحة لمدة 10 دقائق من وصولها. لو ما وصل الكود بعد بضع ثوانٍ، غالباً المشكلة من المنصة نفسها وليس من Mr10x. تقدر تتواصل معنا على الواتساب لأي مشكلة.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>كيف أبدأ؟</span><span class="faq-icon">+</span></div>
+      <div class="faq-a">سجّل طلب المتجر من الزر في الأعلى، وسنتواصل معك على الواتساب خلال ساعات لتفعيل حسابك وشرح الإعداد. العملية كلها ما تاخذ أكثر من 10 دقائق.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>هل بياناتي وبيانات زبائني آمنة؟</span><span class="faq-icon">+</span></div>
+      <div class="faq-a">نعم. الأكواد تُحذف تلقائياً بعد 10 دقائق من إنشائها. لا نحتفظ ببيانات الزبائن ولا نشاركها مع أي طرف. الاتصال بالإيميل يتم بشكل آمن عبر IMAP/SSL.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CTA ── -->
+<div class="cta-section">
+  <h2>جاهز تبدأ؟</h2>
+  <p>سجّل طلبك الآن وسنتواصل معك على الواتساب خلال ساعات.</p>
+  <a href="index.html?register=1" class="btn btn-primary btn-lg">سجّل طلب المتجر</a>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">
+    <div class="logo-type"><span class="lt-m">M</span><span class="lt-r">r</span><span class="lt-10">10</span><span class="lt-x">x</span></div>
+  </div>
+  <div>
+    <a href="https://wa.me/966580198626" target="_blank" rel="noopener" class="footer-whatsapp">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+      تواصل معنا: 0580198626
+    </a>
+  </div>
+  <div class="footer-links">
+    <a href="#how">كيف يعمل</a>
+    <a href="#features">المميزات</a>
+    <a href="#pricing">الأسعار</a>
+    <a href="index.html?register=1">تسجيل</a>
+    <a href="index.html">تسجيل الدخول</a>
+    <a href="privacy-policy.html">سياسة الخصوصية</a>
+    <a href="refund-policy.html">سياسة الاسترداد</a>
+    <a href="terms.html">الشروط والأحكام</a>
+  </div>
+  <div class="footer-copy">© 2026 Mr10x — جميع الحقوق محفوظة</div>
+  <div style="margin-top:8px"><a href="/admin" style="font-size:11px;color:rgba(138,136,152,0.2);text-decoration:none" onmouseover="this.style.color='rgba(138,136,152,0.5)'" onmouseout="this.style.color='rgba(138,136,152,0.2)'">⚙</a></div>
+</footer>
+
+<script>
+function toggleFaq(el) {
+  const item = el.parentElement;
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+</script>
+</body>
+</html>
