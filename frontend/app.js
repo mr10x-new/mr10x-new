@@ -1,4 +1,4 @@
-const API = window.MR10X_API || 'https://mr10x-otp-production.up.railway.app';
+const API = window.MR10X_API || '';
 let TOKEN = localStorage.getItem('mr10x_token');
 let isRegister = false;
 let pendingVerifyId = null;
