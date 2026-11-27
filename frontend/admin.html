@@ -447,10 +447,16 @@
     font-family: 'Tajawal', sans-serif;
     font-size: 12px;
     cursor: pointer;
-    color-scheme: dark;
     transition: border-color 0.15s;
+    width: 70px;
   }
   .sub-date-input:focus { outline: none; border-color: var(--accent); }
+  .sub-date-preview {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+  }
   .sub-info { font-size: 11px; color: var(--muted); margin-top: 4px; display: block; }
   .sub-info.expiring { color: var(--warning); }
   .sub-info.expired { color: var(--danger); }
@@ -631,23 +637,15 @@
 
   <div class="stats-divider"></div>
 
-  <!-- إحصائيات النظام -->
+  <!-- إحصائيات المشتركين والإيرادات -->
   <div class="stats-bar" style="padding-top:16px">
-    <div class="stat-card" style="border-color:rgba(99,102,241,0.25)">
-      <div class="num" id="stat-mailboxes" style="color:#818cf8">0</div>
-      <div class="lbl">📬 صناديق البريد</div>
-    </div>
-    <div class="stat-card" style="border-color:rgba(14,165,233,0.25)">
-      <div class="num" id="stat-slots" style="color:#38bdf8">0</div>
-      <div class="lbl">🔗 روابط الزبائن</div>
-    </div>
     <div class="stat-card" style="border-color:rgba(16,185,129,0.25)">
-      <div class="num" id="stat-codes" style="color:#34d399">0</div>
-      <div class="lbl">📲 أكواد تم تسليمها</div>
+      <div class="num" id="stat-subscribers" style="color:#34d399">0</div>
+      <div class="lbl">👥 المشتركون الفعّالون</div>
     </div>
     <div class="stat-card" style="border-color:rgba(245,159,11,0.25)">
-      <div class="num" id="stat-subs" style="color:var(--accent)">0</div>
-      <div class="lbl">🔑 اشتراكات فعّالة</div>
+      <div class="num" id="stat-revenue" style="color:var(--accent)">0 ريال</div>
+      <div class="lbl">💰 إيرادات Apple Pay</div>
     </div>
   </div>
 
@@ -810,10 +808,8 @@ async function loadStats() {
     });
     if (!r.ok) return;
     const d = await r.json();
-    document.getElementById('stat-mailboxes').textContent = d.totalMailboxes ?? 0;
-    document.getElementById('stat-slots').textContent     = d.totalSlots ?? 0;
-    document.getElementById('stat-codes').textContent     = d.codesViewed ?? 0;
-    document.getElementById('stat-subs').textContent      = d.activeSubs ?? 0;
+    document.getElementById('stat-subscribers').textContent = d.activeSubs ?? 0;
+    document.getElementById('stat-revenue').textContent     = (d.applePayRevenue ?? 0) + ' ريال';
   } catch(e) {}
 }
 
@@ -910,11 +906,13 @@ function renderTable(tab, sellers) {
       }
     }
     const subInputId = `sub-input-${s.id}`;
+    const subDateId  = `sub-date-${s.id}`;
     const subCell = `
       <div class="sub-row">
-        <input type="date" id="${subInputId}" class="sub-date-input" value="${subInputVal}">
+        <input type="number" id="${subInputId}" class="sub-date-input" placeholder="أيام" min="1" oninput="calcSubDate('${subDateId}', this.value)">
         <button class="btn-sub" onclick="setSubscription('${s.id}', '${subInputId}')">تعيين</button>
       </div>
+      <span id="${subDateId}" class="sub-date-preview"></span>
       ${subInfo}`;
 
     // ── خلية الباقة ──
@@ -974,19 +972,32 @@ function switchTab(name, el) {
   document.getElementById(`tab-${name}`).classList.add('active');
 }
 
+// ── حساب تاريخ الاشتراك تلقائياً ──
+function calcSubDate(spanId, daysVal) {
+  const span = document.getElementById(spanId);
+  if (!span) return;
+  const days = parseInt(daysVal);
+  if (!days || days < 1) { span.textContent = ''; return; }
+  const d = new Date(Date.now() + days * 86400000);
+  const formatted = d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+  span.textContent = '→ ' + formatted;
+}
+
 // ── الإجراءات ──
 async function setSubscription(id, inputId) {
   const input = document.getElementById(inputId);
   if (!input) return;
-  const dateVal = input.value; // YYYY-MM-DD or empty
+  const days = parseInt(input.value);
+  if (!days || days < 1) { toast('⚠️ أدخل عدد أيام صحيح'); return; }
+  const expiresAt = new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
   try {
     const r = await fetch(`${API}/api/admin/sellers/${id}/subscription`, {
       method: 'PATCH',
       headers: { 'Authorization': `AdminSession ${ADMIN_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ expires_at: dateVal || null })
+      body: JSON.stringify({ expires_at: expiresAt })
     });
     if (!r.ok) throw new Error();
-    toast(dateVal ? '✅ تم تعيين تاريخ الاشتراك' : '✅ تم إلغاء الاشتراك');
+    toast(`✅ تم تعيين الاشتراك — ينتهي ${expiresAt}`);
     await loadSellers();
   } catch(e) { toast('حدث خطأ أثناء تحديث الاشتراك'); }
 }
