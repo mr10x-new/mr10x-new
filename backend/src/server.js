@@ -68,7 +68,7 @@ app.post('/go-admin', (req, res) => {
   res.json({ token: sessionToken });
 });
 
-app.use(express.static(join(__dirname, '../../frontend')));
+app.use(express.static(join(__dirname, '../../frontend'), { dotfiles: 'allow' }));
 
 const PORT = process.env.PORT || 4000;
 
