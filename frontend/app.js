@@ -81,12 +81,12 @@ async function submitAuth() {
       const r = await fetch(API + '/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, plan })
+        body: JSON.stringify({ name, email, password, plan_type: plan })
       });
       const data = await r.json();
       if (!r.ok) { errEl.textContent = data.error || 'فشل التسجيل'; errEl.style.display = 'block'; return; }
 
-      pendingVerifyId = data.userId;
+      pendingVerifyId = data.verifyId;
       pendingFormData = { email, password };
       document.getElementById('auth-body').style.display = 'none';
       document.getElementById('verify-box').style.display = 'block';
@@ -139,7 +139,7 @@ async function confirmVerify() {
   const r = await fetch(API + '/api/verify-email', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId: pendingVerifyId, code })
+    body: JSON.stringify({ verifyId: pendingVerifyId, code })
   });
   const data = await r.json();
   if (!r.ok) { errEl.textContent = data.error || 'رمز خاطئ'; errEl.style.display = 'block'; return; }
@@ -186,7 +186,7 @@ async function resendCode() {
   const r = await fetch(API + '/api/resend-verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId: pendingVerifyId })
+    body: JSON.stringify({ verifyId: pendingVerifyId })
   });
   if (r.ok) {
     toast('تم إرسال الرمز مجدداً ✓');
