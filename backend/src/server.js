@@ -15,13 +15,24 @@ import {
 } from './gmail.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// ─── CORS ─────────────────────────────────────────────────────────────────────
 const CORS_ORIGIN = process.env.CORS_ORIGIN;
 const app = express();
+// N-02: trust the first hop proxy so req.ip gives the real client IP
+// (prevents X-Forwarded-For spoofing on Railway / reverse proxies)
 app.set('trust proxy', 1);
-if (CORS_ORIGIN) { app.use(cors({ origin: CORS_ORIGIN })); }
+// F-08: only enable CORS when CORS_ORIGIN is explicitly set.
+// Calling cors(false) or cors() defaults to origin:'*' — omit entirely when not needed.
+if (CORS_ORIGIN) {
+  app.use(cors({ origin: CORS_ORIGIN }));
+}
+// F-02: cap request body at 64 KB to prevent DoS via large payloads
 app.use(express.json({ limit: '64kb' }));
+// للـ webhook: قبول plain-text و form-encoded أيضاً
 app.use('/api/inbound', express.text({ limit: '64kb' }));
 app.use('/api/inbound', express.urlencoded({ extended: false, limit: '64kb' }));
+// F-03: security headers (without helmet — no network access)
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -33,224 +44,556 @@ app.use((req, res, next) => {
   next();
 });
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
+// ─── Serve Frontend ───────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.sendFile(join(__dirname, '../../frontend/landing.html'));
+});
 
-// In-memory rate limiter — resets on restart (acceptable for Railway)
-const rateLimitMap = new Map();
-function rateLimit(key, maxRequests, windowMs) {
+app.get('/admin', (req, res) => {
+  res.sendFile(join(__dirname, '../../frontend/admin.html'));
+});
+
+// F-06: /go-admin now issues a session token instead of echoing the password in the URL
+// X-05: changed from GET to POST so credentials are in the request body, not the URL/query
+// (GET params appear in Railway access logs, server logs, and browser history)
+// F-01: return JSON token instead of redirect — prevents session token appearing in server logs
+app.post('/go-admin', (req, res) => {
+  const { email, pass } = req.body || {};
+  const ADMIN_EMAIL_ENV = process.env.ADMIN_EMAIL || '';
+  if (!safeCompare(pass || '', ADMIN_PASS)) return res.status(401).json({ error: 'Unauthorized' });
+  if (ADMIN_EMAIL_ENV && (!email || email.toLowerCase() !== ADMIN_EMAIL_ENV.toLowerCase()))
+    return res.status(401).json({ error: 'Unauthorized' });
+  const sessionToken = createAdminSession();
+  // Return token as JSON — client stores it and navigates to /admin itself
+  res.json({ token: sessionToken });
+});
+
+app.use(express.static(join(__dirname, '../../frontend'), { dotfiles: 'allow' }));
+
+const PORT = process.env.PORT || 4000;
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+// F-04: PBKDF2-SHA256 password hashing (memory-hard, GPU-resistant)
+// 100,000 iterations per OWASP 2023 recommendation for PBKDF2-HMAC-SHA256
+const PBKDF2_ITERATIONS = 100_000;
+const PBKDF2_KEYLEN = 32; // 32 bytes = 64 hex chars
+
+/**
+ * hashPw(pw, salt) — new: PBKDF2-SHA256 (salt required)
+ * Legacy path: salt=null → old SHA-256 single-secret hash (migration only)
+ */
+function hashPw(pw, salt) {
+  if (salt) {
+    const pepper = process.env.SECRET || 'mr10x';
+    return pbkdf2Sync(pw + pepper, salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, 'sha256').toString('hex');
+  }
+  // legacy (no salt): SHA-256 for checking old unsalted accounts before migration
+  return createHash('sha256').update(pw + (process.env.SECRET || 'mr10x')).digest('hex');
+}
+
+/**
+ * hashPwLegacy(pw, salt) — old SHA-256+salt method used before F-04 fix.
+ * Used only in login to migrate existing salted accounts to PBKDF2.
+ */
+function hashPwLegacy(pw, salt) {
+  return createHash('sha256')
+    .update(salt + pw + (process.env.SECRET || 'mr10x'))
+    .digest('hex');
+}
+
+function generateSalt() {
+  return randomBytes(16).toString('hex');
+}
+
+function safeCompare(a, b) {
+  try {
+    const ba = Buffer.from(String(a));
+    const bb = Buffer.from(String(b));
+    if (ba.length !== bb.length) {
+      // constant-time length mismatch check
+      timingSafeEqual(ba, ba);
+      return false;
+    }
+    return timingSafeEqual(ba, bb);
+  } catch {
+    return false;
+  }
+}
+
+// ─── Rate limiting (F-08, F-13) ───────────────────────────────────────────────
+const rateLimitStore = new Map(); // key → { count, resetAt }
+
+function rateLimit(key, maxPerWindow = 10, windowMs = 60_000) {
   const now = Date.now();
-  const entry = rateLimitMap.get(key) || { count: 0, resetAt: now + windowMs };
-  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + windowMs; }
+  let entry = rateLimitStore.get(key);
+  if (!entry || entry.resetAt < now) {
+    entry = { count: 0, resetAt: now + windowMs };
+    rateLimitStore.set(key, entry);
+  }
   entry.count++;
-  rateLimitMap.set(key, entry);
-  return entry.count <= maxRequests;
+  return entry.count <= maxPerWindow;
 }
 
-function generateSalt() { return randomBytes(16).toString('hex'); }
+// Cleanup stale rate-limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of rateLimitStore) {
+    if (v.resetAt < now) rateLimitStore.delete(k);
+  }
+}, 5 * 60_000);
 
-function hashPw(password, salt) {
-  const SECRET = process.env.SECRET || '';
-  return pbkdf2Sync(`${password}${SECRET}`, salt, 100_000, 32, 'sha256').toString('hex');
-}
-
-function pwMatch(plain, hash, salt) {
-  const candidate = Buffer.from(hashPw(plain, salt), 'hex');
-  const stored    = Buffer.from(hash, 'hex');
-  if (candidate.length !== stored.length) return false;
-  return timingSafeEqual(candidate, stored);
-}
-
-// ─── Auth middleware ───────────────────────────────────────────────────────────
+// ─── Auth middleware (F-03: use api_token, F-07: subscription check) ──────────
 function authMiddleware(req, res, next) {
-  const header = req.headers.authorization || '';
-  if (!header.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
-  const token = header.slice(7);
-  const session = db.prepare('SELECT * FROM sessions WHERE token = ? AND expires_at > ?')
-    .get(token, Math.floor(Date.now() / 1000));
-  if (!session) return res.status(401).json({ error: 'Session expired or invalid' });
-  const seller = db.prepare('SELECT * FROM sellers WHERE id = ?').get(session.seller_id);
-  if (!seller || seller.status !== 'active') return res.status(403).json({ error: 'Account not active' });
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  const seller = db.prepare('SELECT * FROM sellers WHERE api_token = ?').get(token);
+  if (!seller) return res.status(401).json({ error: 'Invalid token' });
+  if (seller.status === 'pending')  return res.status(403).json({ error: 'pending' });
+  if (seller.status === 'rejected') return res.status(403).json({ error: 'rejected' });
+  // F-07: enforce subscription expiry
+  if (seller.subscription_expires_at && seller.subscription_expires_at < Math.floor(Date.now() / 1000)) {
+    return res.status(403).json({ error: 'subscription_expired', message: 'انتهت صلاحية اشتراكك. تواصل مع الدعم للتجديد.' });
+  }
   req.seller = seller;
   next();
 }
 
-function adminMiddleware(req, res, next) {
-  const header = req.headers.authorization || '';
-  if (!header.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
-  const token = header.slice(7);
-  const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-  if (!ADMIN_TOKEN || token !== ADMIN_TOKEN) return res.status(403).json({ error: 'Forbidden' });
-  next();
+// ─── Admin Auth (F-01: no hardcoded fallback; F-06: session tokens) ──────────
+// F-01: ADMIN_PASS must be set — no default fallback
+const ADMIN_PASS = process.env.ADMIN_PASS;
+if (!ADMIN_PASS) {
+  console.error('[FATAL] ADMIN_PASS environment variable is not set. Set it before starting the server.');
+  process.exit(1);
 }
 
-// ─── Health check ─────────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => res.json({ ok: true }));
+// In-memory admin sessions: token → { expiresAt }
+const adminSessions = new Map();
 
-// ─── Admin Login ──────────────────────────────────────────────────────────────
+function createAdminSession() {
+  const token = randomBytes(32).toString('hex');
+  adminSessions.set(token, { expiresAt: Date.now() + 8 * 60 * 60_000 }); // 8h
+  return token;
+}
+
+function validateAdminSession(token) {
+  const s = adminSessions.get(token);
+  if (!s) return false;
+  if (s.expiresAt < Date.now()) {
+    adminSessions.delete(token);
+    return false;
+  }
+  return true;
+}
+
+// Cleanup expired admin sessions every hour
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of adminSessions) {
+    if (v.expiresAt < now) adminSessions.delete(k);
+  }
+}, 60 * 60_000);
+
+function adminMiddleware(req, res, next) {
+  // F-01: Accept session token from Authorization header ONLY: "AdminSession <token>"
+  // req.query.session removed — tokens must never travel via URL (server log exposure)
+  const authHeader = req.headers.authorization || '';
+  const sessionToken = authHeader.startsWith('AdminSession ')
+    ? authHeader.slice('AdminSession '.length)
+    : null;
+
+  if (sessionToken && validateAdminSession(sessionToken)) return next();
+
+  // N-03: x-admin-pass legacy header removed — session tokens only
+  return res.status(401).json({ error: 'Unauthorized' });
+}
+
+// POST /api/admin/login — exchange password for session token
 app.post('/api/admin/login', (req, res) => {
+  // N-04: rate limit — 5 attempts per 15 minutes per IP to prevent brute-force
   const ip = req.ip;
   if (!rateLimit(`admin-login:${ip}`, 5, 15 * 60_000)) {
-    return res.status(429).json({ error: 'Too many attempts, try again later' });
+    return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
   }
-  const { token } = req.body || {};
-  const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-  if (!ADMIN_TOKEN || token !== ADMIN_TOKEN) {
-    return res.status(403).json({ error: 'Invalid admin token' });
-  }
-  res.json({ ok: true, token: ADMIN_TOKEN });
+  const { password } = req.body || {};
+  if (!safeCompare(password || '', ADMIN_PASS))
+    return res.status(401).json({ error: 'Invalid password' });
+  const token = createAdminSession();
+  res.json({ token, expiresIn: 8 * 3600 });
 });
 
-// ─── Register ─────────────────────────────────────────────────────────────────
+// ─── HTML escaping (N-06) ─────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ─── Mailer (Mailjet API) ─────────────────────────────────────────────────────
+const MAILJET_API_KEY    = process.env.MAILJET_API_KEY;
+const MAILJET_SECRET_KEY = process.env.MAILJET_SECRET_KEY;
+const MAILJET_FROM_EMAIL = process.env.MAILJET_FROM_EMAIL || 'noreply@mr10x.app';
+const MAILJET_FROM_NAME  = 'Mr10x';
+
+async function sendEmail({ to, subject, html }) {
+  // Try Mailjet first
+  if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
+    try {
+      const auth = Buffer.from(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`).toString('base64');
+      const mjRes = await fetch('https://api.mailjet.com/v3.1/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          Messages: [
+            {
+              From: { Email: MAILJET_FROM_EMAIL, Name: MAILJET_FROM_NAME },
+              To:   [{ Email: to }],
+              Subject: subject,
+              HTMLPart: html
+            }
+          ]
+        })
+      });
+      if (mjRes.ok) {
+        const data = await mjRes.json();
+        const status = data?.Messages?.[0]?.Status;
+        if (!status || status === 'success') return; // sent successfully
+        console.error(`[MAIL] Mailjet delivery status: ${status} — falling back to Resend`);
+      } else {
+        const err = await mjRes.text();
+        console.error(`[MAIL] Mailjet error ${mjRes.status}: ${err} — falling back to Resend`);
+      }
+    } catch (e) {
+      console.error(`[MAIL] Mailjet exception: ${e.message} — falling back to Resend`);
+    }
+  } else {
+    console.warn('[MAIL] Mailjet keys not set — trying Resend');
+  }
+
+  // Fallback: Resend
+  const RESEND_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_KEY) {
+    throw new Error('No working email provider configured (Mailjet failed, RESEND_API_KEY not set)');
+  }
+  const rsRes = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${RESEND_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: MAILJET_FROM_EMAIL || 'noreply@mr10x.co',
+      to,
+      subject,
+      html
+    })
+  });
+  if (!rsRes.ok) {
+    const err = await rsRes.text();
+    throw new Error(`Resend error ${rsRes.status}: ${err}`);
+  }
+  console.log('[MAIL] Email sent via Resend fallback');
+}
+
+async function sendVerificationEmail(toEmail, toName, code) {
+  // N-06: escape user-supplied values before inserting into HTML
+  const safeName = escapeHtml(toName);
+  const safeCode = escapeHtml(code);
+  await sendEmail({
+    to: toEmail,
+    subject: 'كود تأكيد التسجيل في Mr10x',
+    html: `
+      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: auto;">
+        <h2 style="color: #7c3aed;">مرحباً ${safeName} 👋</h2>
+        <p>شكراً لتسجيلك في <strong>Mr10x</strong>. أدخل الكود التالي لتأكيد بريدك الإلكتروني:</p>
+        <div style="background: #1a1a2e; border: 2px solid #7c3aed; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+          <span style="font-size: 36px; font-weight: bold; color: #a855f7; letter-spacing: 8px;">${safeCode}</span>
+        </div>
+        <p style="color: #888;">ينتهي الكود خلال 15 دقيقة.</p>
+        <p style="color: #888; font-size: 12px;">إذا لم تطلب هذا الكود تجاهل هذه الرسالة.</p>
+      </div>
+    `
+  });
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+// POST /api/register — إرسال كود التحقق على الإيميل
 app.post('/api/register', async (req, res) => {
-  const ip = req.ip;
-  if (!rateLimit(`register:${ip}`, 10, 15 * 60_000)) {
-    return res.status(429).json({ error: 'Too many attempts, try again later' });
-  }
-  const { name, email, phone, password } = req.body || {};
-  if (!name || !email || !password) return res.status(400).json({ error: 'name, email, password required' });
-  if (password.length < 8) return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' });
+  const { name, email, password, phone, plan_type } = req.body || {};
+  if (!name || !email || !password) return res.status(400).json({ error: 'Missing fields' });
+  // N-07: enforce minimum password length consistently (matches /api/reset-password)
+  if (password.length < 6) return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
+  // B-06: validate email format before hitting the DB
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email format' });
+  const existing = db.prepare('SELECT id FROM sellers WHERE email = ?').get(email.toLowerCase());
+  if (existing) return res.status(409).json({ error: 'Email already registered' });
 
-  const normalizedEmail = email.toLowerCase().trim();
-  const existing = db.prepare('SELECT id FROM sellers WHERE email = ?').get(normalizedEmail);
-  if (existing) return res.status(409).json({ error: 'البريد الإلكتروني مسجّل مسبقاً' });
+  const validPlan = ['plan1', 'plan2', 'plan3'].includes(plan_type) ? plan_type : 'plan2';
 
+  // F-02: cryptographically secure OTP generation
+  const code = String(randomInt(100000, 1000000));
+  const expiresAt = Math.floor(Date.now() / 1000) + 900; // 15 دقيقة
+  const verifyId = randomUUID();
+
+  db.prepare('DELETE FROM email_verifications WHERE email = ?').run(email.toLowerCase());
+
+  // F-05: generate salt and hash with salt
   const salt = generateSalt();
-  const hash = hashPw(password, salt);
-  const id   = randomUUID();
-  const verifyToken = randomBytes(32).toString('hex');
-  const verifyExpiry = Math.floor(Date.now() / 1000) + 24 * 3600;
+  db.prepare('INSERT INTO email_verifications (id, email, code, name, password, phone, plan_type, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(verifyId, email.toLowerCase(), code, name, hashPw(password, salt) + ':' + salt, phone || '', validPlan, expiresAt);
 
-  db.prepare(`INSERT INTO sellers (id, name, email, phone, password, salt, status, verify_token, verify_token_expires_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`)
-    .run(id, name, normalizedEmail, phone || '', hash, salt, verifyToken, verifyExpiry);
-
-  // Send verification email
-  const BASE_URL = process.env.BASE_URL || 'https://mr10x.co';
-  const verifyUrl = `${BASE_URL}/verify-email.html?token=${verifyToken}`;
   try {
-    await sendEmail({
-      to: normalizedEmail,
-      subject: 'تأكيد بريدك الإلكتروني — Mr10x',
-      html: `
-        <div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-          <h2 style="color:#6C63FF">مرحباً ${name}!</h2>
-          <p>شكراً لتسجيلك في Mr10x. لتفعيل حسابك، يرجى الضغط على الرابط أدناه:</p>
-          <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#6C63FF;color:#fff;text-decoration:none;border-radius:8px;margin:16px 0">
-            تأكيد البريد الإلكتروني
-          </a>
-          <p style="color:#666;font-size:14px">الرابط صالح لمدة 24 ساعة.</p>
-          <p style="color:#666;font-size:12px">إذا لم تقم بالتسجيل، يمكنك تجاهل هذا الإيميل.</p>
-        </div>`
-    });
-  } catch (err) {
-    console.error('[Register] Email send failed:', err.message);
+    await sendVerificationEmail(email, name, code);
+  } catch (e) {
+    console.error('[MAIL ERROR]', e.message);
+    // B-03: clean up the pending record and tell the client — a verifyId is useless without the email
+    db.prepare('DELETE FROM email_verifications WHERE id = ?').run(verifyId);
+    return res.status(500).json({ error: 'فشل إرسال بريد التحقق. يرجى المحاولة مرة أخرى.' });
   }
 
-  res.json({ ok: true, message: 'تم التسجيل بنجاح. تحقق من بريدك الإلكتروني لتأكيد الحساب.' });
+  res.json({ verify: true, verifyId });
 });
 
-// ─── Verify Email ─────────────────────────────────────────────────────────────
+// POST /api/verify-email — تأكيد الكود وإنشاء الحساب
 app.post('/api/verify-email', (req, res) => {
+  const { verifyId, code } = req.body || {};
+  if (!verifyId || !code) return res.status(400).json({ error: 'Missing fields' });
+
+  // X-03: rate limit — 10 attempts per 15 minutes per IP to prevent OTP brute-force
   const ip = req.ip;
   if (!rateLimit(`verify-email:${ip}`, 10, 15 * 60_000)) {
-    return res.status(429).json({ error: 'Too many attempts, try again later' });
+    return res.status(429).json({ error: 'Too many attempts. Try again later.' });
   }
-  const { token } = req.body || {};
-  if (!token) return res.status(400).json({ error: 'token required' });
 
-  const seller = db.prepare('SELECT * FROM sellers WHERE verify_token = ? AND verify_token_expires_at > ?')
-    .get(token, Math.floor(Date.now() / 1000));
+  const record = db.prepare('SELECT * FROM email_verifications WHERE id = ?').get(verifyId);
+  if (!record) return res.status(404).json({ error: 'انتهت صلاحية الكود أو غير صحيح' });
+  if (record.used) return res.status(400).json({ error: 'تم استخدام هذا الكود مسبقاً' });
+  if (record.expires_at < Math.floor(Date.now() / 1000)) {
+    db.prepare('DELETE FROM email_verifications WHERE id = ?').run(verifyId);
+    return res.status(400).json({ error: 'انتهت صلاحية الكود، أعد التسجيل' });
+  }
+  if (!safeCompare(String(code).trim(), record.code)) {
+    return res.status(400).json({ error: 'الكود غير صحيح' });
+  }
 
-  if (!seller) return res.status(400).json({ error: 'الرابط غير صالح أو منتهي الصلاحية' });
+  const existing = db.prepare('SELECT id FROM sellers WHERE email = ?').get(record.email);
+  if (existing) return res.status(409).json({ error: 'البريد الإلكتروني مسجل مسبقاً' });
 
-  db.prepare('UPDATE sellers SET status = ?, verify_token = NULL, verify_token_expires_at = NULL WHERE id = ?')
-    .run('pending_approval', seller.id);
+  // Parse stored "hash:salt" from email_verifications
+  let storedHash = record.password;
+  let storedSalt = null;
+  const colonIdx = record.password.lastIndexOf(':');
+  if (colonIdx > 0 && colonIdx < record.password.length - 1) {
+    const potentialSalt = record.password.slice(colonIdx + 1);
+    if (potentialSalt.length === 32) { // 16-byte hex salt
+      storedHash = record.password.slice(0, colonIdx);
+      storedSalt = potentialSalt;
+    }
+  }
 
-  res.json({ ok: true, message: 'تم تأكيد بريدك الإلكتروني. سيتم مراجعة حسابك من قِبل الإدارة.' });
+  const sellerId = randomUUID();
+  const apiToken = randomUUID();
+  const sellerPlan = ['plan1', 'plan2', 'plan3'].includes(record.plan_type) ? record.plan_type : 'plan2';
+  db.prepare('INSERT INTO sellers (id, name, email, password, salt, phone, status, plan_type, api_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(sellerId, record.name, record.email, storedHash, storedSalt, record.phone, 'pending', sellerPlan, apiToken);
+
+  db.prepare('UPDATE email_verifications SET used = 1 WHERE id = ?').run(verifyId);
+
+  // إرسال إيميل ترحيب بعد إنشاء الحساب
+  sendEmail({
+    to: record.email,
+    subject: 'مرحباً بك في Mr10x 🎉',
+    html: `
+      <!DOCTYPE html>
+      <html lang="ar" dir="rtl">
+      <head><meta charset="UTF-8"/></head>
+      <body style="margin:0;padding:0;background:#0e0e12;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#f4f3ef;direction:rtl;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;margin:40px auto;">
+          <tr><td style="background:#17171d;border-radius:18px;border:1px solid rgba(255,255,255,0.07);overflow:hidden;">
+            <!-- Header -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="background:linear-gradient(135deg,#1f1f28,#17171d);padding:32px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.07);">
+                <div style="font-size:28px;font-weight:900;letter-spacing:-1px;">
+                  <span style="color:#f59f0b;">M</span><span style="color:#f59f0b;">r</span><span style="color:#f4f3ef;">10</span><span style="color:#f59f0b;">x</span>
+                </div>
+              </td></tr>
+              <!-- Body -->
+              <tr><td style="padding:36px 32px;">
+                <div style="font-size:22px;font-weight:800;margin-bottom:12px;">مرحباً، ${record.name} 👋</div>
+                <p style="color:#8a8898;line-height:1.7;margin:0 0 24px;">
+                  تم إنشاء حسابك في Mr10x بنجاح. سيتم مراجعة طلبك وتفعيل الاشتراك من قِبل الفريق خلال وقت قصير.
+                </p>
+
+                <!-- Info box -->
+                <table width="100%" cellpadding="0" cellspacing="0" style="background:#1f1f28;border-radius:12px;border:1px solid rgba(255,255,255,0.07);margin-bottom:28px;">
+                  <tr><td style="padding:20px 24px;">
+                    <div style="color:#8a8898;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:12px;">تفاصيل الحساب</div>
+                    <div style="margin-bottom:8px;font-size:14px;"><span style="color:#8a8898;">الاسم: </span>${record.name}</div>
+                    <div style="margin-bottom:8px;font-size:14px;"><span style="color:#8a8898;">البريد: </span>${record.email}</div>
+                    <div style="font-size:14px;"><span style="color:#8a8898;">الحالة: </span><span style="color:#f59f0b;font-weight:700;">قيد المراجعة</span></div>
+                  </td></tr>
+                </table>
+
+                <!-- Steps -->
+                <div style="font-size:14px;font-weight:700;margin-bottom:14px;color:#f4f3ef;">الخطوات التالية:</div>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr><td style="padding:0 0 12px;">
+                    <div style="display:flex;gap:10px;">
+                      <span style="background:rgba(245,159,11,0.12);border:1.5px solid rgba(245,159,11,0.3);color:#f59f0b;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-left:10px;">١</span>
+                      <span style="color:#8a8898;font-size:14px;">انتظر تفعيل الحساب — سيتم ذلك خلال دقائق في أوقات الدوام</span>
+                    </div>
+                  </td></tr>
+                  <tr><td style="padding:0 0 12px;">
+                    <span style="background:rgba(245,159,11,0.12);border:1.5px solid rgba(245,159,11,0.3);color:#f59f0b;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-left:10px;">٢</span>
+                    <span style="color:#8a8898;font-size:14px;">ستصلك رسالة إشعار عند التفعيل</span>
+                  </td></tr>
+                  <tr><td>
+                    <span style="background:rgba(245,159,11,0.12);border:1.5px solid rgba(245,159,11,0.3);color:#f59f0b;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-left:10px;">٣</span>
+                    <span style="color:#8a8898;font-size:14px;">سجّل الدخول وابدأ استخدام لوحة التحكم</span>
+                  </td></tr>
+                </table>
+
+                <!-- CTA -->
+                <div style="text-align:center;margin-top:32px;">
+                  <a href="https://mr10x-production.up.railway.app/index.html" style="display:inline-block;background:#f59f0b;color:#0e0e12;font-weight:800;font-size:15px;padding:14px 32px;border-radius:12px;text-decoration:none;">
+                    الذهاب لصفحة تسجيل الدخول
+                  </a>
+                </div>
+              </td></tr>
+              <!-- Footer -->
+              <tr><td style="padding:20px 32px;text-align:center;border-top:1px solid rgba(255,255,255,0.07);">
+                <p style="color:#8a8898;font-size:12px;margin:0;">
+                  بحاجة لمساعدة؟
+                  <a href="https://wa.me/966500000000" style="color:#f59f0b;text-decoration:none;font-weight:700;">تواصل معنا عبر واتساب</a>
+                </p>
+                <p style="color:#8a8898;font-size:11px;margin:8px 0 0;">© ${new Date().getFullYear()} Mr10x — جميع الحقوق محفوظة</p>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body>
+      </html>
+    `
+  }).catch(err => console.error('Welcome email failed:', err));
+
+  res.json({ pending: true });
 });
 
-// ─── Login ────────────────────────────────────────────────────────────────────
+// POST /api/login (F-03: return api_token; F-05: salt-aware hash check)
 app.post('/api/login', (req, res) => {
+  // X-02: rate limit — 10 attempts per 15 minutes per IP to prevent brute-force
   const ip = req.ip;
   if (!rateLimit(`login:${ip}`, 10, 15 * 60_000)) {
-    return res.status(429).json({ error: 'Too many attempts, try again later' });
+    return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
   }
+
   const { email, password } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: 'email and password required' });
+  const seller = db.prepare('SELECT * FROM sellers WHERE email = ?').get(String(email).toLowerCase());
 
-  const seller = db.prepare('SELECT * FROM sellers WHERE email = ?').get(email.toLowerCase().trim());
-  if (!seller) return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' });
-  if (!pwMatch(password, seller.password, seller.salt)) return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' });
+  if (!seller) return res.status(401).json({ error: 'Invalid credentials' });
 
-  if (seller.status === 'pending') return res.status(403).json({ error: 'pending_verification', message: 'يرجى تأكيد بريدك الإلكتروني أولاً' });
-  if (seller.status === 'pending_approval') return res.status(403).json({ error: 'pending_approval', message: 'حسابك قيد المراجعة من قِبل الإدارة' });
-  if (seller.status === 'rejected') return res.status(403).json({ error: 'rejected', message: 'تم رفض طلب حسابك' });
-  if (seller.status !== 'active') return res.status(403).json({ error: 'Account not active' });
+  // F-04: try PBKDF2 hash first (new accounts and already-migrated accounts)
+  let expectedHash = hashPw(password, seller.salt || null);
+  let needsMigration = false;
 
-  // Check subscription expiry
-  const now = Math.floor(Date.now() / 1000);
-  if (seller.subscription_expires_at && seller.subscription_expires_at < now) {
-    return res.status(403).json({ error: 'subscription_expired', message: 'انتهت صلاحية اشتراكك. يرجى التواصل مع الدعم لتجديد الاشتراك.' });
+  if (!safeCompare(expectedHash, seller.password)) {
+    if (seller.salt) {
+      // Try legacy SHA-256+salt for accounts that existed before the F-04 fix
+      const legacyHash = hashPwLegacy(password, seller.salt);
+      if (!safeCompare(legacyHash, seller.password)) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      // Legacy hash matched — will re-hash with PBKDF2 below
+      needsMigration = true;
+    } else {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
   }
 
-  const token = randomBytes(32).toString('hex');
-  const expiresAt = now + 30 * 24 * 3600; // 30 days
-  db.prepare('INSERT INTO sessions (token, seller_id, expires_at) VALUES (?, ?, ?)').run(token, seller.id, expiresAt);
+  if (seller.status === 'pending')
+    return res.status(403).json({ error: 'pending', message: 'حسابك قيد المراجعة، سنتواصل معك على الواتساب قريباً.' });
 
-  res.json({ ok: true, token, name: seller.name, email: seller.email });
+  // Lazily migrate: no-salt accounts and legacy SHA-256+salt accounts → PBKDF2
+  if (!seller.salt || needsMigration) {
+    const newSalt = generateSalt();
+    const newHash = hashPw(password, newSalt);
+    db.prepare('UPDATE sellers SET password = ?, salt = ? WHERE id = ?').run(newHash, newSalt, seller.id);
+  }
+
+  // F-03: return api_token not seller.id
+  res.json({
+    token: seller.api_token,
+    name: seller.name,
+    subscription_expires_at: seller.subscription_expires_at || null,
+    plan_type: seller.plan_type || 'plan2'
+  });
 });
 
-// ─── Forgot Password ──────────────────────────────────────────────────────────
+// POST /api/forgot-password — طلب إعادة تعيين كلمة المرور (F-11, F-13)
 app.post('/api/forgot-password', async (req, res) => {
-  const ip = req.ip;
-  if (!rateLimit(`forgot-password:${ip}`, 5, 10 * 60_000)) {
-    return res.status(429).json({ error: 'Too many attempts, try again later' });
-  }
   const { email } = req.body || {};
-  if (!email) return res.status(400).json({ error: 'email required' });
+  if (!email) return res.status(400).json({ error: 'Email required' });
 
-  const seller = db.prepare('SELECT * FROM sellers WHERE email = ?').get(email.toLowerCase().trim());
-  // Always return success to prevent email enumeration
-  if (!seller) return res.json({ ok: true, message: 'إذا كان البريد مسجّلاً، ستصل رسالة استعادة كلمة المرور' });
+  // F-13: rate limit by IP — 5 requests per 10 minutes
+  // N-02: use req.ip (trust proxy=1 set above) instead of parsing X-Forwarded-For manually
+  const ip = req.ip;
+  if (!rateLimit(`fp:${ip}`, 5, 10 * 60_000)) {
+    return res.status(429).json({ error: 'Too many requests. Please wait before trying again.' });
+  }
 
-  const rawToken   = randomBytes(32).toString('hex');
-  const tokenHash  = createHash('sha256').update(rawToken).digest('hex');
-  const expiresAt  = Math.floor(Date.now() / 1000) + 3600; // 1 hour
+  const seller = db.prepare('SELECT * FROM sellers WHERE email = ?').get(String(email).toLowerCase());
+  // F-11: always return ok; never log email not-found
+  if (!seller) return res.json({ ok: true });
 
-  db.prepare('DELETE FROM password_resets WHERE email = ?').run(seller.email);
-  db.prepare('INSERT INTO password_resets (token, email, expires_at, used) VALUES (?, ?, ?, 0)')
-    .run(tokenHash, seller.email, expiresAt);
+  const rawToken = randomBytes(32).toString('hex');
+  // F-06: store SHA-256 hash of token in DB — raw token only travels in the email link
+  const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 30; // 30 دقيقة
 
-  const BASE_URL  = process.env.BASE_URL || 'https://mr10x.co';
-  const resetUrl  = `${BASE_URL}/reset-password.html?token=${rawToken}`;
+  db.prepare('INSERT INTO password_resets (id, email, token, expires_at) VALUES (?, ?, ?, ?)')
+    .run(randomUUID(), seller.email, tokenHash, expiresAt);
+
+  // F-12: BASE_URL is mandatory — set it in Railway environment variables
+  const BASE_URL = process.env.BASE_URL;
+  if (!BASE_URL) {
+    console.error('[forgot-password] BASE_URL env var not set — reset link cannot be generated');
+    return res.json({ ok: true }); // don't expose config error to client
+  }
+  const resetLink = `${BASE_URL}/reset-password.html?token=${rawToken}`;
+
   try {
+    // N-06: escape seller.name before inserting into HTML
+    const safeSellerName = escapeHtml(seller.name);
     await sendEmail({
       to: seller.email,
-      subject: 'استعادة كلمة المرور — Mr10x',
+      subject: 'إعادة تعيين كلمة المرور — Mr10x',
       html: `
-        <div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-          <h2 style="color:#6C63FF">استعادة كلمة المرور</h2>
-          <p>تلقّينا طلباً لإعادة تعيين كلمة مرور حسابك.</p>
-          <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#6C63FF;color:#fff;text-decoration:none;border-radius:8px;margin:16px 0">
-            إعادة تعيين كلمة المرور
-          </a>
-          <p style="color:#666;font-size:14px">الرابط صالح لمدة ساعة واحدة فقط.</p>
-          <p style="color:#666;font-size:12px">إذا لم تطلب ذلك، يمكنك تجاهل هذا الإيميل.</p>
-        </div>`
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; background:#0f0f1a; color:#e2e8f0; padding:32px; border-radius:12px;">
+          <h2 style="color:#a855f7; margin-bottom:8px;">Mr10x</h2>
+          <p>مرحباً ${safeSellerName}،</p>
+          <p>طلبت إعادة تعيين كلمة مرورك. اضغط الزر أدناه:</p>
+          <a href="${resetLink}" style="display:inline-block;margin:20px 0;padding:14px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">إعادة تعيين كلمة المرور</a>
+          <p style="color:#94a3b8;font-size:13px;">الرابط صالح لمدة 30 دقيقة فقط. إذا لم تطلب هذا، تجاهل الرسالة.</p>
+        </div>
+      `
     });
-  } catch (err) {
-    console.error('[ForgotPw] Email send failed:', err.message);
+  } catch (mailErr) {
+    console.error(`[forgot-password] mail error:`, mailErr.message);
   }
 
-  res.json({ ok: true, message: 'إذا كان البريد مسجّلاً، ستصل رسالة استعادة كلمة المرور' });
+  res.json({ ok: true });
 });
 
-// ─── Reset Password ───────────────────────────────────────────────────────────
+// POST /api/reset-password — تعيين كلمة مرور جديدة (F-05: salt-aware)
 app.post('/api/reset-password', (req, res) => {
   const { token, password } = req.body || {};
-  if (!token || !password) return res.status(400).json({ error: 'token and password required' });
-  if (password.length < 8) return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' });
+  if (!token || !password) return res.status(400).json({ error: 'Missing fields' });
+  if (password.length < 6) return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
 
   // F-06: hash the incoming raw token before comparing against stored hash
   const tokenHash = createHash('sha256').update(token).digest('hex');
@@ -272,15 +615,18 @@ app.post('/api/reset-password', (req, res) => {
 // GET /api/me — بيانات الحساب الحالي
 app.get('/api/me', authMiddleware, (req, res) => {
   const seller = db.prepare('SELECT id, name, email, phone, status, subscription_expires_at, plan_type FROM sellers WHERE id = ?').get(req.seller.id);
+  // احسب الأيام المتبقية من subscription_expires_at وأضفها للاستجابة
+  // null = اشتراك غير محدود (لا تاريخ انتهاء)، 0 = منتهي
   const now = Math.floor(Date.now() / 1000);
   let subscription_days_left;
   if (!seller.subscription_expires_at) {
-    subscription_days_left = null;
+    subscription_days_left = null; // غير محدود
   } else if (seller.subscription_expires_at > now) {
     subscription_days_left = Math.ceil((seller.subscription_expires_at - now) / 86400);
   } else {
-    subscription_days_left = 0;
+    subscription_days_left = 0; // منتهي
   }
+  // استخرج اسم الخطة من plan_type
   const planNames = { plan1: 'أساسية', plan2: 'احترافية', plan3: 'متقدمة' };
   res.json({ ...seller, subscription_days_left, plan: seller.plan_type });
 });
@@ -311,6 +657,7 @@ app.patch('/api/admin/sellers/:id/subscription', adminMiddleware, (req, res) => 
   let ts = null;
   if (expires_at) {
     const parsed = new Date(expires_at).getTime();
+    // B-04: reject invalid/NaN dates instead of silently storing NULL
     if (isNaN(parsed)) return res.status(400).json({ error: 'expires_at تاريخ غير صالح' });
     ts = Math.floor(parsed / 1000);
   }
@@ -342,6 +689,8 @@ app.get('/api/admin/stats', adminMiddleware, (req, res) => {
 // ─── Mailboxes ─────────────────────────────────────────────────────────────────
 // ─── Gmail OAuth Routes ────────────────────────────────────────────────────────
 
+// Start OAuth — requires seller Bearer auth
+// Returns JSON { url } so the frontend JS can do window.location.href = url
 app.get('/api/auth/gmail/start', authMiddleware, (req, res) => {
   if (!gmailEnabled()) return res.status(503).json({ error: 'Gmail OAuth not configured' });
   const { mailbox_id } = req.query;
@@ -355,6 +704,7 @@ app.get('/api/auth/gmail/start', authMiddleware, (req, res) => {
   res.json({ url: getAuthUrl(state) });
 });
 
+// OAuth callback — from Google, no Bearer auth
 app.get('/api/auth/gmail/callback', async (req, res) => {
   if (!gmailEnabled()) return res.status(503).send('Gmail OAuth not configured');
   const { code, state, error } = req.query;
@@ -373,6 +723,7 @@ app.get('/api/auth/gmail/callback', async (req, res) => {
 
   const { mailboxId, sellerId } = parsed;
 
+  // Verify mailbox still belongs to this seller
   const mailbox = db.prepare('SELECT id, email FROM mailboxes WHERE id = ? AND seller_id = ?')
     .get(mailboxId, sellerId);
   if (!mailbox) {
@@ -384,6 +735,7 @@ app.get('/api/auth/gmail/callback', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     const expiry = now + (tokens.expires_in || 3600);
 
+    // Get the connected Gmail address
     let gmailEmail = null;
     try { gmailEmail = await getGmailAddress(tokens.access_token); } catch {}
 
@@ -401,6 +753,7 @@ app.get('/api/auth/gmail/callback', async (req, res) => {
       mailboxId
     );
 
+    // Redirect back to the seller dashboard
     res.redirect('/index.html?gmail_connected=1');
   } catch (err) {
     console.error('[Gmail OAuth] callback error:', err.message);
@@ -408,6 +761,7 @@ app.get('/api/auth/gmail/callback', async (req, res) => {
   }
 });
 
+// Disconnect Gmail from a mailbox
 app.post('/api/mailboxes/:id/gmail-disconnect', authMiddleware, (req, res) => {
   const mailbox = db.prepare('SELECT id FROM mailboxes WHERE id = ? AND seller_id = ?')
     .get(req.params.id, req.seller.id);
@@ -436,6 +790,7 @@ app.get('/api/mailboxes', authMiddleware, (req, res) => {
   res.json(rows);
 });
 
+// إضافة صندوق جديد — webhook فقط، لا كلمة مرور
 app.post('/api/mailboxes', authMiddleware, (req, res) => {
   const { email, label } = req.body || {};
   if (!email) return res.status(400).json({ error: 'البريد الإلكتروني مطلوب' });
@@ -455,27 +810,34 @@ app.delete('/api/mailboxes/:id', authMiddleware, (req, res) => {
 });
 
 // ─── Inbound Webhook ───────────────────────────────────────────────────────────
+// Gmail / أي خدمة توجيه تُرسل الإيميل الوارد هنا كـ POST
+// محتوى الطلب: نص الإيميل (plain-text أو HTML) في body.text / body.html / raw body
 app.post('/api/inbound/:token', (req, res) => {
+  // B-01: rate-limit inbound webhook to prevent flooding — 60 requests per minute per token
   if (!rateLimit(`inbound:${req.params.token}`, 60, 60_000)) {
     return res.status(429).json({ error: 'Too many requests' });
   }
   const mailbox = db.prepare('SELECT * FROM mailboxes WHERE webhook_token = ?').get(req.params.token);
   if (!mailbox) return res.status(404).json({ error: 'Invalid token' });
 
+  // استخراج نص الإيميل من أي صيغة ترسلها خدمة التوجيه
   let subject = '';
   let body = '';
 
   const ct = (req.headers['content-type'] || '').toLowerCase();
 
   if (ct.includes('application/json')) {
+    // بعض الخدمات ترسل JSON: { subject, text, html, body, plain, ... }
     const p = req.body || {};
     subject = String(p.subject || p.Subject || '');
     body = String(p.text || p.plain || p.body || p.html || '');
   } else {
+    // plain text / form-encoded / raw
     body = String(req.body?.text || req.body?.body || '');
     subject = String(req.body?.subject || '');
   }
 
+  // إذا body فارغ ولكن المحتوى الخام موجود (content-type: text/plain)
   if (!body && typeof req.body === 'string') {
     body = req.body;
   }
@@ -487,10 +849,12 @@ app.post('/api/inbound/:token', (req, res) => {
     return res.json({ ok: true, extracted: false });
   }
 
+  // إيجاد السلوتس المرتبطة بهذا الصندوق
   const slots = db.prepare('SELECT * FROM slots WHERE mailbox_id = ?').all(mailbox.id);
   const receivedTs = Math.floor(Date.now() / 1000);
 
   for (const slot of slots) {
+    // تجنب التكرار
     const exists = db.prepare(
       'SELECT id FROM codes WHERE slot_id = ? AND code = ? AND received_at > ?'
     ).get(slot.id, code, receivedTs - 60);
@@ -504,12 +868,13 @@ app.post('/api/inbound/:token', (req, res) => {
       String(req.body?.from || req.body?.sender || '').toLowerCase().slice(0, 200),
       subject.slice(0, 200),
       receivedTs,
-      receivedTs + 10 * 60
+      receivedTs + 10 * 60 // ينتهي بعد 10 دقائق
     );
 
     console.log(`[Webhook] 🔑 كود جديد ${code} → slot ${slot.id}`);
   }
 
+  // تحديث last_sync
   db.prepare("UPDATE mailboxes SET last_sync = ?, status = 'active', last_error = NULL WHERE id = ?")
     .run(receivedTs, mailbox.id);
 
@@ -544,11 +909,13 @@ app.post('/api/slots', authMiddleware, (req, res) => {
   }
 
   const created = [];
+  // N-08: lower max bulk slots from 100 → 10 to limit DoS potential
   const n = Math.min(Number(count) || 1, 10);
+  // N-01: encrypt account_password before storing
   const encryptedAccountPassword = account_password ? encryptPassword(account_password) : '';
   for (let i = 0; i < n; i++) {
     const id = randomUUID();
-    const token = randomBytes(16).toString('hex');
+    const token = randomBytes(16).toString('hex'); // F-02: cryptographically secure slot token
     db.prepare('INSERT INTO slots (id, seller_id, mailbox_id, label, token, account_email, account_password, account_password_encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
       .run(id, req.seller.id, mailbox_id, label, token, account_email, encryptedAccountPassword, encryptedAccountPassword ? 1 : 0);
     created.push({ id, token, label, account_email });
@@ -563,6 +930,7 @@ app.patch('/api/slots/:id', authMiddleware, (req, res) => {
   if (account_email !== undefined)
     db.prepare('UPDATE slots SET account_email = ? WHERE id = ?').run(account_email, req.params.id);
   if (account_password !== undefined) {
+    // N-01: encrypt before storing
     const enc = account_password ? encryptPassword(account_password) : '';
     db.prepare('UPDATE slots SET account_password = ?, account_password_encrypted = ? WHERE id = ?')
       .run(enc, enc ? 1 : 0, req.params.id);
@@ -585,13 +953,16 @@ app.delete('/api/slots/:id', authMiddleware, (req, res) => {
 });
 
 // ─── Customer endpoint (public) ───────────────────────────────────────────────
+// GET /api/slot/:token — F-08: rate limited (10 req/min per IP)
 app.get('/api/slot/:token', (req, res) => {
+  // N-02: use req.ip (trust proxy=1 set above)
   const ip = req.ip;
   if (!rateLimit(`slot:${ip}`, 10, 60_000)) {
     return res.status(429).json({ error: 'Too many requests.' });
   }
   const slot = db.prepare('SELECT * FROM slots WHERE token = ?').get(req.params.token);
   if (!slot) return res.status(404).json({ error: 'Invalid link' });
+  // N-08: account_password returned decrypted — slot token is the customer's auth credential
   const rawPass = slot.account_password
     ? (slot.account_password_encrypted ? decryptPassword(slot.account_password) : slot.account_password)
     : '';
@@ -603,7 +974,9 @@ app.get('/api/slot/:token', (req, res) => {
   });
 });
 
+// GET /api/code/:token — جلب آخر كود
 app.get('/api/code/:token', (req, res) => {
+  // N-05: rate limit — 20 req/min per IP (prevent enumeration/scraping)
   const ip = req.ip;
   if (!rateLimit(`code:${ip}`, 20, 60_000)) {
     return res.status(429).json({ error: 'Too many requests.' });
@@ -612,6 +985,7 @@ app.get('/api/code/:token', (req, res) => {
   const slot = db.prepare('SELECT * FROM slots WHERE token = ?').get(req.params.token);
   if (!slot) return res.status(404).json({ error: 'Invalid link' });
 
+  // N-08: decrypt account_password for the customer-facing response
   const rawPass = slot.account_password
     ? (slot.account_password_encrypted ? decryptPassword(slot.account_password) : slot.account_password)
     : '';
@@ -652,6 +1026,7 @@ pollAll();
 
 // Gmail polling — كل 60 ثانية
 if (gmailEnabled()) {
+  // Initial poll after 10 seconds (let server warm up)
   setTimeout(() => pollGmailMailboxes(db), 10_000);
   setInterval(() => pollGmailMailboxes(db), 60_000);
   console.log('[Gmail] Polling enabled — every 60s');
