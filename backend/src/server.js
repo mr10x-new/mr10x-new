@@ -13,6 +13,7 @@ import {
   getAuthUrl, exchangeCode, getGmailAddress,
   pollGmailMailboxes
 } from './gmail.js';
+import nodemailer from 'nodemailer';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -275,29 +276,57 @@ async function sendEmail({ to, subject, html }) {
     console.warn('[MAIL] Mailjet keys not set — trying Resend');
   }
 
-  // Fallback: Resend
+  // Fallback 1: Resend
   const RESEND_KEY = process.env.RESEND_API_KEY;
-  if (!RESEND_KEY) {
-    throw new Error('No working email provider configured (Mailjet failed, RESEND_API_KEY not set)');
+  if (RESEND_KEY) {
+    try {
+      const rsRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: MAILJET_FROM_EMAIL || 'noreply@mr10x.co',
+          to,
+          subject,
+          html
+        })
+      });
+      if (rsRes.ok) {
+        console.log('[MAIL] Email sent via Resend fallback');
+        return;
+      }
+      const err = await rsRes.text();
+      console.error(`[MAIL ERROR] Resend error ${rsRes.status}: ${err} — falling back to SMTP`);
+    } catch (e) {
+      console.error(`[MAIL] Resend exception: ${e.message} — falling back to SMTP`);
+    }
+  } else {
+    console.warn('[MAIL] RESEND_API_KEY not set — trying SMTP');
   }
-  const rsRes = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${RESEND_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from: MAILJET_FROM_EMAIL || 'noreply@mr10x.co',
-      to,
-      subject,
-      html
-    })
+
+  // Fallback 2: SMTP (Gmail via nodemailer)
+  const SMTP_HOST = process.env.SMTP_HOST;
+  const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
+  const SMTP_USER = process.env.SMTP_USER;
+  const SMTP_PASS = process.env.SMTP_PASS;
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    throw new Error('No working email provider configured (Mailjet, Resend, and SMTP all failed or unconfigured)');
+  }
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS }
   });
-  if (!rsRes.ok) {
-    const err = await rsRes.text();
-    throw new Error(`Resend error ${rsRes.status}: ${err}`);
-  }
-  console.log('[MAIL] Email sent via Resend fallback');
+  await transporter.sendMail({
+    from: `"Mr10x" <${SMTP_USER}>`,
+    to,
+    subject,
+    html
+  });
+  console.log('[MAIL] Email sent via SMTP fallback');
 }
 
 async function sendVerificationEmail(toEmail, toName, code) {
