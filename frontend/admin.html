@@ -474,6 +474,68 @@
     transition: background 0.15s;
   }
   .btn-sub:hover { background: rgba(245,159,11,0.22); }
+  .btn-free-trial {
+    background: rgba(16,185,129,0.12);
+    color: #10b981;
+    border: 1px solid rgba(16,185,129,0.3);
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .btn-free-trial:hover { background: rgba(16,185,129,0.22); }
+  /* ── Free Trials Section ── */
+  .free-trials-section {
+    margin-top: 32px;
+  }
+  .free-trials-section h3 {
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .free-trials-section h3 span.badge {
+    background: rgba(16,185,129,0.15);
+    color: #10b981;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 12px;
+  }
+  .trial-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+  }
+  .trial-info { display: flex; flex-direction: column; gap: 2px; }
+  .trial-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .trial-days { font-size: 12px; color: var(--muted); }
+  .trial-wa {
+    background: #25d366;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .trial-wa:hover { background: #1ebe5c; }
 
   /* ── Plan Select ── */
   .plan-select {
@@ -905,14 +967,9 @@ function renderTable(tab, sellers) {
         subInfo = `<span class="sub-info ok">متبقي ${daysLeft} يوم</span>`;
       }
     }
-    const subInputId = `sub-input-${s.id}`;
-    const subDateId  = `sub-date-${s.id}`;
+    const isFreeTrialActive = s.subscription_expires_at && !s.paid_subscription;
     const subCell = `
-      <div class="sub-row">
-        <input type="number" id="${subInputId}" class="sub-date-input" placeholder="أيام" min="1" oninput="calcSubDate('${subDateId}', this.value)">
-        <button class="btn-sub" onclick="setSubscription('${s.id}', '${subInputId}')">تعيين</button>
-      </div>
-      <span id="${subDateId}" class="sub-date-preview"></span>
+      <button class="btn-free-trial" onclick="setFreeTrial('${s.id}')">🎁 تجربة مجانية (7 أيام)</button>
       ${subInfo}`;
 
     // ── خلية الباقة ──
@@ -960,7 +1017,37 @@ function renderTable(tab, sellers) {
         </thead>
         <tbody>${rows}</tbody>
       </table>
+    </div>
+    ${tab === 'active' ? renderFreeTrials(allSellers) : ''}`;
+}
+
+function renderFreeTrials(sellers) {
+  const now = Math.floor(Date.now() / 1000);
+  const trialThreshold = 7 * 86400; // sellers with sub <= 7 days = likely free trial
+  const trials = sellers.filter(s => {
+    if (!s.subscription_expires_at) return false;
+    const daysLeft = (s.subscription_expires_at - now) / 86400;
+    return daysLeft > 0 && daysLeft <= 7;
+  });
+  if (trials.length === 0) return '';
+  const cards = trials.map(s => {
+    const daysLeft = Math.ceil((s.subscription_expires_at - now) / 86400);
+    const phone = (s.phone || '').replace(/\D/g, '');
+    const waLink = phone ? `https://wa.me/${phone}?text=${encodeURIComponent('السلام عليكم، هل تودّ الاستمرار مع Mr10x بعد انتهاء التجربة المجانية؟ 🎁')}` : '';
+    return `
+    <div class="trial-card">
+      <div class="trial-info">
+        <span class="trial-name">${escapeHtml(s.name)}</span>
+        <span class="trial-days">ينتهي خلال ${daysLeft} ${daysLeft === 1 ? 'يوم' : 'أيام'} · ${s.email}</span>
+      </div>
+      ${waLink ? `<a class="trial-wa" href="${waLink}" target="_blank">📱 واتساب</a>` : `<span style="color:var(--muted);font-size:12px">لا يوجد رقم</span>`}
     </div>`;
+  }).join('');
+  return `
+  <div class="free-trials-section">
+    <h3>🎁 تجارب مجانية نشطة <span class="badge">${trials.length}</span></h3>
+    ${cards}
+  </div>`;
 }
 
 // ── Tabs ──
@@ -972,24 +1059,9 @@ function switchTab(name, el) {
   document.getElementById(`tab-${name}`).classList.add('active');
 }
 
-// ── حساب تاريخ الاشتراك تلقائياً ──
-function calcSubDate(spanId, daysVal) {
-  const span = document.getElementById(spanId);
-  if (!span) return;
-  const days = parseInt(daysVal);
-  if (!days || days < 1) { span.textContent = ''; return; }
-  const d = new Date(Date.now() + days * 86400000);
-  const formatted = d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-  span.textContent = '→ ' + formatted;
-}
-
-// ── الإجراءات ──
-async function setSubscription(id, inputId) {
-  const input = document.getElementById(inputId);
-  if (!input) return;
-  const days = parseInt(input.value);
-  if (!days || days < 1) { toast('⚠️ أدخل عدد أيام صحيح'); return; }
-  const expiresAt = new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
+// ── تجربة مجانية 7 أيام ──
+async function setFreeTrial(id) {
+  const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
   try {
     const r = await fetch(`${API}/api/admin/sellers/${id}/subscription`, {
       method: 'PATCH',
@@ -997,9 +1069,9 @@ async function setSubscription(id, inputId) {
       body: JSON.stringify({ expires_at: expiresAt })
     });
     if (!r.ok) throw new Error();
-    toast(`✅ تم تعيين الاشتراك — ينتهي ${expiresAt}`);
+    toast(`🎁 تم تفعيل التجربة المجانية — تنتهي ${expiresAt}`);
     await loadSellers();
-  } catch(e) { toast('حدث خطأ أثناء تحديث الاشتراك'); }
+  } catch(e) { toast('حدث خطأ أثناء تفعيل التجربة المجانية'); }
 }
 
 async function setPlan(id, selectId) {

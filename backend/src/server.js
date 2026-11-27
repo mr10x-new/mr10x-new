@@ -712,7 +712,8 @@ app.get('/api/admin/stats', adminMiddleware, (req, res) => {
   const codesViewed      = db.prepare("SELECT COUNT(*) as n FROM codes WHERE viewed = 1").get().n;
   const now              = Math.floor(Date.now() / 1000);
   const activeSubs       = db.prepare("SELECT COUNT(*) as n FROM sellers WHERE subscription_expires_at IS NOT NULL AND subscription_expires_at > ?").get(now).n;
-  res.json({ totalSellers, activeSellers, pendingSellers, totalMailboxes, totalSlots, totalCodes, codesViewed, activeSubs });
+  const applePayRevenue  = db.prepare("SELECT COALESCE(SUM(amount), 0) as total FROM tap_payments").get().total;
+  res.json({ totalSellers, activeSellers, pendingSellers, totalMailboxes, totalSlots, totalCodes, codesViewed, activeSubs, applePayRevenue });
 });
 
 // ─── Mailboxes ─────────────────────────────────────────────────────────────────
@@ -1062,6 +1063,52 @@ if (gmailEnabled()) {
 } else {
   console.log('[Gmail] OAuth not configured (GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI missing)');
 }
+
+// ─── Tap Payments Webhook (Apple Pay auto-activation) ─────────────────────────
+// Tap fires this when a charge succeeds — we activate the seller for 30 days
+app.post('/api/pay/tap-webhook', async (req, res) => {
+  try {
+    const event  = req.body || {};
+    // Tap sends either the charge object directly or wraps it under event.data
+    const charge = event.object === 'charge' ? event : (event.data || {});
+
+    if (charge.status === 'CAPTURED') {
+      const email  = charge?.customer?.email;
+      const chargeId = charge.id || randomUUID();
+      const amount   = charge.amount || 0;
+      const currency = charge.currency || 'SAR';
+
+      if (email) {
+        const seller = db.prepare('SELECT id FROM sellers WHERE email = ?').get(email);
+        const expiresAt = Math.floor(Date.now() / 1000) + (30 * 86400); // +30 days
+
+        if (seller) {
+          db.prepare('UPDATE sellers SET subscription_expires_at = ? WHERE id = ?')
+            .run(expiresAt, seller.id);
+
+          // Log the payment for revenue tracking (ignore duplicate charge_id)
+          try {
+            db.prepare('INSERT INTO tap_payments (id, charge_id, seller_id, email, amount, currency) VALUES (?, ?, ?, ?, ?, ?)')
+              .run(randomUUID(), chargeId, seller.id, email, amount, currency);
+          } catch (dupErr) { /* duplicate charge_id — idempotent */ }
+
+          console.log(`[TapWebhook] Activated seller ${email} until ${new Date(expiresAt * 1000).toISOString()}`);
+        } else {
+          // Seller not found — log charge anyway for manual follow-up
+          try {
+            db.prepare('INSERT INTO tap_payments (id, charge_id, seller_id, email, amount, currency) VALUES (?, ?, NULL, ?, ?, ?)')
+              .run(randomUUID(), chargeId, email, amount, currency);
+          } catch (dupErr) { /* duplicate */ }
+          console.warn(`[TapWebhook] No seller found for email: ${email}`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[TapWebhook] Error processing webhook:', err.message);
+  }
+  // Always return 200 so Tap stops retrying
+  res.json({ received: true });
+});
 
 app.listen(PORT, () => {
   console.log(`Mr10x OTP Backend running on port ${PORT}`);

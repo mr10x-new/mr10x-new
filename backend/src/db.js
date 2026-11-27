@@ -150,4 +150,17 @@ try { db.exec(`ALTER TABLE mailboxes ADD COLUMN gmail_email         TEXT DEFAULT
 db.prepare('DELETE FROM email_verifications WHERE expires_at < unixepoch() - 86400').run();
 db.prepare('DELETE FROM password_resets WHERE expires_at < unixepoch() - 86400').run();
 
+// Tap Payments — webhook charge log for Apple Pay revenue tracking
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tap_payments (
+    id          TEXT PRIMARY KEY,
+    charge_id   TEXT UNIQUE NOT NULL,
+    seller_id   TEXT REFERENCES sellers(id) ON DELETE SET NULL,
+    email       TEXT,
+    amount      REAL DEFAULT 0,
+    currency    TEXT DEFAULT 'SAR',
+    created_at  INTEGER DEFAULT (unixepoch())
+  );
+`);
+
 export default db;
