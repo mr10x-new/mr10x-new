@@ -318,7 +318,10 @@ async function sendEmail({ to, subject, html }) {
     host: SMTP_HOST,
     port: SMTP_PORT,
     secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS }
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    connectionTimeout: 8000,
+    greetingTimeout:   5000,
+    socketTimeout:     10000
   });
   await transporter.sendMail({
     from: `"Mr10x" <${SMTP_USER}>`,
@@ -377,7 +380,11 @@ app.post('/api/register', async (req, res) => {
     .run(verifyId, email.toLowerCase(), code, name, hashPw(password, salt) + ':' + salt, phone || '', validPlan, expiresAt);
 
   try {
-    await sendVerificationEmail(email, name, code);
+    // M-01: hard 15-second cap so the route never hangs waiting for a slow mail provider
+    const mailTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Email send timed out after 15s')), 15_000)
+    );
+    await Promise.race([sendVerificationEmail(email, name, code), mailTimeout]);
   } catch (e) {
     console.error('[MAIL ERROR]', e.message);
     // B-03: clean up the pending record and tell the client — a verifyId is useless without the email
