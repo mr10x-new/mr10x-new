@@ -496,7 +496,7 @@ app.post('/api/verify-email', (req, res) => {
 
                 <!-- CTA -->
                 <div style="text-align:center;margin-top:32px;">
-                  <a href="https://mr10x-production.up.railway.app/index.html" style="display:inline-block;background:#f59f0b;color:#0e0e12;font-weight:800;font-size:15px;padding:14px 32px;border-radius:12px;text-decoration:none;">
+                  <a href="https://mr10x.co/index.html" style="display:inline-block;background:#f59f0b;color:#0e0e12;font-weight:800;font-size:15px;padding:14px 32px;border-radius:12px;text-decoration:none;">
                     الذهاب لصفحة تسجيل الدخول
                   </a>
                 </div>
@@ -505,7 +505,7 @@ app.post('/api/verify-email', (req, res) => {
               <tr><td style="padding:20px 32px;text-align:center;border-top:1px solid rgba(255,255,255,0.07);">
                 <p style="color:#8a8898;font-size:12px;margin:0;">
                   بحاجة لمساعدة؟
-                  <a href="https://wa.me/966500000000" style="color:#f59f0b;text-decoration:none;font-weight:700;">تواصل معنا عبر واتساب</a>
+                  <a href="https://wa.me/966580198626" style="color:#f59f0b;text-decoration:none;font-weight:700;">تواصل معنا عبر واتساب</a>
                 </p>
                 <p style="color:#8a8898;font-size:11px;margin:8px 0 0;">© ${new Date().getFullYear()} Mr10x — جميع الحقوق محفوظة</p>
               </td></tr>
