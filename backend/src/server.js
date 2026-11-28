@@ -554,6 +554,9 @@ app.post('/api/login', (req, res) => {
   if (seller.status === 'pending')
     return res.status(403).json({ error: 'pending', message: 'حسابك قيد المراجعة، سنتواصل معك على الواتساب قريباً.' });
 
+  if (seller.status === 'rejected')
+    return res.status(403).json({ error: 'rejected', message: 'تم رفض حسابك. تواصل مع الدعم للمزيد من المعلومات.' });
+
   // Lazily migrate: no-salt accounts and legacy SHA-256+salt accounts → PBKDF2
   if (!seller.salt || needsMigration) {
     const newSalt = generateSalt();
