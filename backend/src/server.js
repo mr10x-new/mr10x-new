@@ -653,7 +653,7 @@ app.post('/api/reset-password', (req, res) => {
 
 // GET /api/me — بيانات الحساب الحالي
 app.get('/api/me', authMiddleware, (req, res) => {
-  const seller = db.prepare('SELECT id, name, email, phone, status, subscription_expires_at, plan_type FROM sellers WHERE id = ?').get(req.seller.id);
+  const seller = db.prepare('SELECT id, name, email, phone, status, created_at, subscription_expires_at, plan_type FROM sellers WHERE id = ?').get(req.seller.id);
   // احسب الأيام المتبقية من subscription_expires_at وأضفها للاستجابة
   // null = اشتراك غير محدود (لا تاريخ انتهاء)، 0 = منتهي
   const now = Math.floor(Date.now() / 1000);
@@ -665,9 +665,15 @@ app.get('/api/me', authMiddleware, (req, res) => {
   } else {
     subscription_days_left = 0; // منتهي
   }
-  // استخرج اسم الخطة من plan_type
-  const planNames = { plan1: 'أساسية', plan2: 'احترافية', plan3: 'متقدمة' };
-  res.json({ ...seller, subscription_days_left, plan: seller.plan_type });
+  // احسب أيام الفترة المجانية المتبقية (14 يوماً من تاريخ الإنشاء)
+  // يظهر فقط عندما لا يوجد اشتراك مدفوع (subscription_expires_at = null)
+  const TRIAL_DAYS = 14;
+  let free_trial_days_left = null;
+  if (!seller.subscription_expires_at && seller.created_at) {
+    const trialEnd = seller.created_at + (TRIAL_DAYS * 86400);
+    free_trial_days_left = Math.max(0, Math.ceil((trialEnd - now) / 86400));
+  }
+  res.json({ ...seller, subscription_days_left, free_trial_days_left, plan: seller.plan_type });
 });
 
 // ─── Admin API ────────────────────────────────────────────────────────────────

@@ -398,6 +398,53 @@ body {
 
 .btn-logout:hover { border-color: rgba(239,68,68,0.4); color: var(--red); }
 
+/* Trial Banner */
+#trial-banner {
+  background: linear-gradient(90deg, rgba(59,130,246,0.08) 0%, rgba(99,102,241,0.06) 100%);
+  border-bottom: 1px solid rgba(59,130,246,0.18);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.trial-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 13.5px;
+}
+
+.trial-icon {
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.trial-label strong {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.trial-label.expired-trial strong {
+  color: var(--red);
+}
+
+.trial-subscribe-link {
+  font-size: 12px;
+  color: #3b82f6;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s;
+}
+
+.trial-subscribe-link:hover { color: #2563eb; }
+
 /* Subscription Banner */
 #sub-banner {
   background: var(--surface);
@@ -1006,6 +1053,15 @@ body {
       </div>
       <button class="btn-logout" onclick="logout()">خروج</button>
     </div>
+  </div>
+
+  <!-- Trial Banner -->
+  <div id="trial-banner" style="display:none">
+    <div class="trial-info">
+      <svg class="trial-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="trial-label">الفترة المجانية المتبقية: <strong id="trial-days-num">...</strong></span>
+    </div>
+    <a class="trial-subscribe-link" id="trial-subscribe-link" href="#" target="_blank">هل تود الاشتراك؟</a>
   </div>
 
   <!-- Sub Banner -->

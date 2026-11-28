@@ -254,6 +254,9 @@ async function loadAll() {
 
 const RENEWAL_WHATSAPP = '966580198626';
 
+// رابط صفحة الدفع (Apple Pay) — سيُحدَّث لاحقاً
+const PAYMENT_URL = '#payment';
+
 async function loadProfile() {
   const r = await apiFetch('/api/me');
   if (!r.ok) return;
@@ -288,6 +291,28 @@ async function loadProfile() {
 
   const msg = encodeURIComponent(`مرحباً، أريد تجديد اشتراكي في MR10X - ${me.name || ''}`);
   document.getElementById('renew-wa-link').href = `https://wa.me/${RENEWAL_WHATSAPP}?text=${msg}`;
+
+  // ── بانر الفترة المجانية ──
+  const trialBanner = document.getElementById('trial-banner');
+  const trialDaysEl = document.getElementById('trial-days-num');
+  const trialLink   = document.getElementById('trial-subscribe-link');
+  const trialLabel  = trialDaysEl ? trialDaysEl.closest('.trial-info') : null;
+
+  // يظهر البانر فقط عندما لا يوجد اشتراك مدفوع (free_trial_days_left !== null)
+  if (trialBanner && me.free_trial_days_left !== null && me.free_trial_days_left !== undefined) {
+    trialBanner.style.display = 'flex';
+    trialLink.href = PAYMENT_URL;
+
+    if (me.free_trial_days_left > 0) {
+      trialDaysEl.textContent = `${me.free_trial_days_left} يوم`;
+      if (trialLabel) trialLabel.classList.remove('expired-trial');
+    } else {
+      trialDaysEl.textContent = 'انتهت';
+      if (trialLabel) trialLabel.classList.add('expired-trial');
+    }
+  } else if (trialBanner) {
+    trialBanner.style.display = 'none';
+  }
 }
 
 let mailboxCache = [];
