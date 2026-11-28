@@ -109,7 +109,17 @@ async function submitAuth() {
         body: JSON.stringify({ email, password })
       });
       const data = await r.json();
-      if (!r.ok) { errEl.textContent = data.error || 'بيانات خاطئة'; errEl.style.display = 'block'; return; }
+      if (!r.ok) {
+        if (data.error === 'pending') {
+          errEl.textContent = data.message || 'حسابك قيد المراجعة، سنتواصل معك على الواتساب قريباً.';
+          errEl.style.display = 'block';
+          setPendingWaLink();
+        } else {
+          errEl.textContent = data.message || data.error || 'بيانات خاطئة';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
       TOKEN = data.token;
       localStorage.setItem('mr10x_token', TOKEN);
       localStorage.setItem('mr10x_name', data.name || '');
