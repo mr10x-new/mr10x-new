@@ -718,6 +718,12 @@ app.patch('/api/admin/sellers/:id/plan', adminMiddleware, (req, res) => {
   res.json({ ok: true });
 });
 
+// TEMP DEBUG: retrieve OTP code for testing (admin only)
+app.get('/api/admin/debug/otp', adminMiddleware, (req, res) => {
+  const records = db.prepare('SELECT id, email, code, name, expires_at FROM email_verifications ORDER BY rowid DESC LIMIT 10').all();
+  res.json(records);
+});
+
 app.get('/api/admin/stats', adminMiddleware, (req, res) => {
   const totalSellers     = db.prepare("SELECT COUNT(*) as n FROM sellers").get().n;
   const activeSellers    = db.prepare("SELECT COUNT(*) as n FROM sellers WHERE status = 'active'").get().n;
